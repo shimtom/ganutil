@@ -1,5 +1,5 @@
 from numpy import array, savez
-from os import join, isfile
+from os.path import join, isfile
 
 
 def discriminate(discriminator, dataset, save, batch_size=32):

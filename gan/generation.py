@@ -1,5 +1,5 @@
 from numpy import array, savez
-from os import join, isfile
+from os.path import join, isfile
 
 
 def generate(generator, dataset, save, batch_size=32):
