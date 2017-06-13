@@ -98,6 +98,8 @@ class Saver:
         columns = int(sqrt(len(images)))
         rows = int(len(images) // columns)
 
+        np.save(join(path, 'images.npy'), images)
+
         if images.shape[-1] == 1:
             images = images.reshape(images.shape[:-1])
 
