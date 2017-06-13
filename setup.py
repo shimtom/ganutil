@@ -7,7 +7,7 @@ setup(name='GAN',
       author='Tomoshgie Shimomura',
       author_email='simomura@iu.nitech.ac.jp',
       packages=find_packages(),
-      install_requires=['numpy', 'pillow', 'tensorflow', 'keras',
+      install_requires=['numpy', 'pillow', 'keras',
                         'matplotlib', 'seaborn', 'h5py'],
       entry_points={
           'console_scripts': [
