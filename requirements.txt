@@ -1,6 +1,5 @@
 numpy
 pillow
-tensorflow
 keras
 matplotlib
 seaborn
