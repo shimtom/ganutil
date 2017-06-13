@@ -98,7 +98,7 @@ def train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size
         saver.parameter(discriminator, generator)
         saver.loss(*losses)
         saver.accuracy(*accuracies)
-        saver.image(generate(generator, 25), id=epoch)
+        saver.image(generate(generator, g(25)), id=epoch)
 
 def set_input_generator(data):
     data_size = len(data)
@@ -109,9 +109,9 @@ def set_input_generator(data):
         nonlocal index
         s, e = index, index + size
         inputs = data[indices[s:e]]
+        index = (index + size) % data_size
         if e > data_size:
-            index = (index + size) % data_size
-            inputs += data[:index]
+            inputs = np.concatenate((inputs, data[:index]))
         return inputs
 
     return generate

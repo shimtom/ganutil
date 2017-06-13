@@ -99,15 +99,17 @@ class Saver:
             images = images.reshape(images.shape[:-1])
 
         for i, img in enumerate(images):
+            Image.fromarray(np.array(img, dtype=np.uint8)).save(join(path, '%02d.png' % i))
+
+        plt.figure()
+        for i, img in enumerate(images):
             if i < columns * rows:
                 plt.subplot(columns, rows, i + 1)
                 plt.imshow(img)
                 plt.axis('off')
-            img = Image.fromarray(np.array(img))
-            img.save(join(path, '%02d.png' % i))
         plt.tight_layout()
         plt.savefig(join(path, 'image.png'))
-
+        plt.close()
 
 class _Saver:
     def __init__(self, name, root):
