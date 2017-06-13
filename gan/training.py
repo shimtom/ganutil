@@ -44,7 +44,7 @@ def train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size
                 metrics=['accuracy'])
 
     # save model architecture
-    saver.model(discriminator, generator)
+    saver.architecture(discriminator, generator)
 
     losses = Gan([], [])
     accuracies = Gan([], [])

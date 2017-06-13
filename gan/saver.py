@@ -45,8 +45,8 @@ class Saver:
             f.write(generator.to_yaml(indent=4))
 
     def model(self, discriminator, generator):
-        discriminator.save('discriminator.h5')
-        generator.save('generator.h5')
+        discriminator.save(join(self._root, 'discriminator.h5'))
+        generator.save(join(self._root, 'generator.h5'))
 
     def parameter(self, discriminator, generator):
         discriminator.save_weights(join(self._root, 'discriminator_weight.h5'))
