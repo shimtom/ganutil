@@ -1,0 +1,7 @@
+numpy
+pillow
+tensorflow
+keras
+matplotlib
+seaborn
+h5py
