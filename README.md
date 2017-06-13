@@ -65,6 +65,7 @@ optional arguments:
 ```
 
 * `train` command
+
   ```
   usage: gan train [-h] [--epoch EPOCH] [--batch BATCH] [--dweight DWEIGHT]
                       [--dlr DLR] [--dbeta1 DBETA1] [--gweight GWEIGHT]
@@ -97,6 +98,7 @@ optional arguments:
   ```
 
 * `generate` command
+
   ```
   usage: gan generate [-h] [-b BATCH] model x save
 
@@ -114,6 +116,7 @@ optional arguments:
   ```
 
 * `discriminate` command
+
   ```
   usage: gan discriminate [-h] [-b BATCH] model x save
 
