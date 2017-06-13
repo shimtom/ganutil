@@ -95,6 +95,7 @@ def train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size
         print('epoch %d / %d loss(d, g): (%f, %f) acc(d, g): (%.3f, %.3f)' % (epoch, epoch_size, d_loss, g_loss, d_acc, g_acc))
 
         # save
+        saver.model(discriminator, generator)
         saver.parameter(discriminator, generator)
         saver.loss(*losses)
         saver.accuracy(*accuracies)

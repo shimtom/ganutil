@@ -12,9 +12,9 @@ def discriminate(discriminator, dataset, save_path, batch_size=32):
     """
     result = discriminator.predict(dataset, batch_size=batch_size)
     extension = save_path.split('.')[-1]
-    if extension is 'npy' or save_path.find('.') == -1:
+    if extension == 'npy' or save_path.find('.') == -1:
         save(save_path, result)
-    elif extension is 'npz':
+    elif extension == 'npz':
         savez(save_path, result)
     else:
-        savetxt(save_path, result)
+        savetxt(save_path, result, fmt='%f')

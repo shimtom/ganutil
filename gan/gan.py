@@ -110,7 +110,6 @@ def command_train(args):
     from .saver import Saver
     from sys import exit, stderr
 
-
     discriminator_path = args.discriminator
     discriminator_input_path = args.dinput
     discriminator_weight_path = args.dweight

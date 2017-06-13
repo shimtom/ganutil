@@ -38,15 +38,19 @@ class Saver:
         with open(join(self._root, 'config.yml'), 'w') as f:
             f.write(yaml.dump(config, indent=4))
 
-    def model(self, discriminator, generator):
+    def architecture(self, discriminator, generator):
         with open(join(self._root, 'discriminator.yml'), 'w') as f:
             f.write(discriminator.to_yaml(indent=4))
         with open(join(self._root, 'generator.yml'), 'w') as f:
             f.write(generator.to_yaml(indent=4))
 
+    def model(self, discriminator, generator):
+        discriminator.save('discriminator.h5')
+        generator.save('generator.h5')
+
     def parameter(self, discriminator, generator):
-        discriminator.save_weights(join(self._root, 'discriminator.h5'))
-        generator.save_weights(join(self._root, 'generator.h5'))
+        discriminator.save_weights(join(self._root, 'discriminator_weight.h5'))
+        generator.save_weights(join(self._root, 'generator_weight.h5'))
 
     def result(self, arr, compression=False):
         path = join(self._root, '%s-result' % self._name)
