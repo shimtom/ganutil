@@ -24,6 +24,7 @@ $ python setup.py install
     - `preprocessor`: keras.preprocessing.image.ImageDataGenerator.discriminatorの入力データに対して前処理を行ったデータのジェネレーター.デフォルトは何もしないジェネレーターを設定している.
     - `saver`: gan.Saver.各値を保存するセーバー.デフォルトは`save`ディレクトリに各値を保存する.
 
+
 * `gan.discriminate(discriminator, dataset, save, batch_size=32)`
 
   discriminatorを使用してデータセットに対して識別を行う.
@@ -35,6 +36,8 @@ $ python setup.py install
     - `dataset`: numpy.ndarray.データセット. 形状は[data size, discriminatorの入力形状].
     - `save`: str.結果を保存するディレクトリ.
     - `batch_size`: int.バッチサイズ.
+
+
 * `gan.generate(generator, dataset, save, batch_size=32)`
 
   generatorを使用してデータセットから生成を行う.
