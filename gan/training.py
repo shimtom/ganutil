@@ -54,7 +54,7 @@ def train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size
     for epoch in range(epoch_size):
         d_loss, g_loss = 0., 0.
         d_acc, g_acc = 0., 0.
-        d = preprocessor.flow(d_inputs, np.ones(len(d_inputs)), batch_size=batch_size)
+        d = preprocessor.flow(d_inputs, np.ones(len(d_inputs), dtype=np.int64), batch_size=batch_size)
         g = set_input_generator(g_inputs)
         # discriminator の 入力データジェネレーターを回す
         for step, samples in enumerate(d):
@@ -107,8 +107,11 @@ def set_input_generator(data):
 
     def generate(size):
         nonlocal index
-        inputs = data[indices[index:index + size]]
-        index = (index + size) % data_size
+        s, e = index, index + size
+        inputs = data[indices[s:e]]
+        if e > data_size:
+            index = (index + size) % data_size
+            inputs += data[:index]
         return inputs
 
     return generate
