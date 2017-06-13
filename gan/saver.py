@@ -1,5 +1,4 @@
 from os.path import join
-from PIL import Image
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -101,9 +100,6 @@ class Saver:
 
         if images.shape[-1] == 1:
             images = images.reshape(images.shape[:-1])
-
-        for i, img in enumerate(images):
-            Image.fromarray(np.array(img, dtype=np.uint8)).save(join(path, '%02d.png' % i))
 
         plt.figure()
         for i, img in enumerate(images):
