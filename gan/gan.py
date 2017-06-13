@@ -1,5 +1,3 @@
-import importlib
-
 def load_model_architecture(path):
     """ファイルからモデルのアーキテクチャを読み込む.
     読み込めるファイルは拡張子がjsonかymlであり、ファイルの書式がkerasの仕様に従っている必要がある。
@@ -203,7 +201,6 @@ def command_train(args):
 def command_generate(args):
     from keras.models import load_model
     from .generation import generate
-    from .saver import Saver
     from numpy import load, array_equal
     from sys import exit, stderr
 
@@ -229,15 +226,13 @@ def command_generate(args):
         print('input data shape %s does not equal to generator input layer shape %s' %
               (str(data_shape), str(input_shape)), file=stderr)
         exit(1)
-    saver = Saver(dataset_path, name='generative')
 
-    generate(generator, dataset, batch_size=batch_size, saver=saver)
+    generate(generator, dataset, save_path, batch_size=batch_size)
 
 
 def command_discriminate(args):
     from keras.models import load_model
     from .discrimination import discriminate
-    from .saver import Saver
     from numpy import load, array_equal
     from sys import exit, stderr
 
@@ -262,9 +257,7 @@ def command_discriminate(args):
               (str(data_shape), str(input_shape)), file=stderr)
         exit(1)
 
-    saver = Saver(save_path, name='generative')
-
-    discriminate(discriminator, dataset, batch_size=batch_size, saver=saver)
+    discriminate(discriminator, dataset, save_path, batch_size=batch_size)
 
 
 def parse_arg():
