@@ -123,7 +123,7 @@ def command_train(args):
 
     # 引数で指定されたパスが存在することを確かめる
     if not (ensure_files([discriminator_path, generator_path], extensions=['json', 'yml']) and
-            ensure_files([discriminator_input_path, generator_input_path], extensions=['npy', 'npz']) and
+            ensure_files([discriminator_input_path, generator_input_path], extensions=['npy']) and
             ensure_directory(save_path)):
         exit(1)
 
@@ -201,7 +201,7 @@ def command_generate(args):
     if not ensure_file(generator_path, extensions=['h5']):
         exit(1)
 
-    if not ensure_file(dataset_path, extensions=['npy', 'npz']):
+    if not ensure_file(dataset_path, extensions=['npy']):
         exit(1)
 
     if not ensure_directory(save_path):
@@ -227,7 +227,7 @@ def command_discriminate(args):
 
     if not ensure_file(discriminator_path, extensions=['h5']):
         exit(1)
-    if not ensure_file(dataset_path, extensions=['npy', 'npz']):
+    if not ensure_file(dataset_path, extensions=['npy']):
         exit(1)
     if not ensure_directory(save_path):
         exit(1)
@@ -255,9 +255,9 @@ def parse_arg():
                                                           'サポートしているファイルフォーマットは[.json|.yml].'
                                                           'kerasの仕様に従ったものでなければならない.')
     train_parser.add_argument('dinput', type=str, help='discriminatorの訓練に使用する入力データセットのファイル名.'
-                                                       'サポートしているファイルフォーマットは[.npy|.npz].')
+                                                       'サポートしているファイルフォーマットは[.npy].')
     train_parser.add_argument('ginput', type=str, help='generatorの訓練に使用する入力データセットのファイル名.'
-                                                       'サポートしているファイルフォーマットは[.npy|.npz].')
+                                                       'サポートしているファイルフォーマットは[.npy].')
     train_parser.add_argument('save', type=str, help='学習結果を保存するディレクトリ.'
                                                      '存在しない場合は終了する.')
     train_parser.add_argument('--epoch', default=20,type=int, help='エポックサイズ.デフォルトは20回.')
@@ -281,10 +281,9 @@ def parse_arg():
                                                                'サポートしているファイルフォーマットは[.h5].'
                                                                'kerasの仕様に従ったものでなければならない.')
     discriminative_parser.add_argument('x', type=str, help='識別に使用されるデータセット.'
-                                                           'サポートしているファイルフォーマットは[.npy|.npz].')
-    discriminative_parser.add_argument('save', type=str, help='結果を保存するディレクトリ.存在しない場合は終了する.'
-                                                              'ファイル名は`discriminated.npz`となる.'
-                                                              'すでに存在する場合はファイル名に索引を付ける.')
+                                                           'サポートしているファイルフォーマットは[.npy].')
+    discriminative_parser.add_argument('save', type=str, help='結果を保存するファイルパス.拡張子がない場合は[.npy]で保存される.'
+                                                              'また,ディレクトリが存在しない場合は終了し,ファイルがすでに存在する場合は上書きする.')
     discriminative_parser.add_argument('-b', '--batch', default=32, type=int, help='バッチサイズ.デフォルトは32.')
     discriminative_parser.set_defaults(func=command_discriminate)
 
@@ -293,10 +292,9 @@ def parse_arg():
                                                            'サポートしているファイルフォーマットは[.h5].'
                                                            'kerasの仕様に従ったものでなければならない.')
     generative_parser.add_argument('x', type=str, help='生成に使用される入力データセット.'
-                                                       'サポートしているファイルフォーマットは[.npy|.npz].')
-    generative_parser.add_argument('save', type=str, help='結果を保存するディレクトリ.存在しない場合は終了する.'
-                                                          'ファイル名は`generated.npz`となる.'
-                                                          'すでに存在する場合はファイル名に索引を付ける.')
+                                                       'サポートしているファイルフォーマットは[.npy].')
+    generative_parser.add_argument('save', type=str, help='結果を保存するファイルパス.拡張子がない場合は[.npy]で保存される.'
+                                                          'また,ディレクトリが存在しない場合は終了し,ファイルがすでに存在する場合は上書きする.')
     generative_parser.add_argument('-b', '--batch', default=32, type=int, help='バッチサイズ.デフォルトは32.')
     generative_parser.set_defaults(func=command_generate)
 
