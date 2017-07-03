@@ -4,12 +4,13 @@ GANモデルに対する操作をまとめたパッケージ.
 
 ## Install
 ```
-$ python setup.py install
+$ pip3 install -e .
 ```
 
 ## Package Usage
 * `gan.train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size, batch_size=32, preprocessor=default_preprocessor, saver=default_saver)`:  
     GANを訓練する.  
+    また,エポックごとに学習結果を保存する.それぞれの損失,精度のグラフ,モデル,パラメータ,生成画像が保存される.保存にはgan.saverを使用する.  
     * Arguments:  
         - `discriminator`: keras.Model.discriminatorモデル.出力の形状は(data size, 1)で値は[0, 1]の範囲でなければならない.
         - `generator`: keras.Model. generatorモデル.出力の形状は(size, height, width, ch)で各値は[-1, 1]の範囲でなければならない.

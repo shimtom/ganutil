@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from math import ceil
 from keras.models import Sequential
 from keras.preprocessing.image import ImageDataGenerator
@@ -14,6 +15,7 @@ default_saver = Saver('save')
 def train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size, batch_size=32,
           preprocessor=default_preprocessor, saver=default_saver):
     """GANを訓練する.
+    また,エポックごとに学習結果を保存する.それぞれの損失,精度のグラフ,モデル,パラメータ,生成画像が保存される.保存にはgan.saverを使用する.
 
     :param keras.Model discriminator: discriminatorモデル.
         出力の形状は(data size, 1)で値は[0, 1]の範囲でなければならない.

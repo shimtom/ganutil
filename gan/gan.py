@@ -1,3 +1,19 @@
+# -*- coding: utf-8 -*-
+from keras.models import model_from_config, load_model
+from keras.optimizers import Adam
+from json import load as json_load
+from yaml import load as yaml_load
+from os.path import isfile, isdir
+from sys import exit, stderr
+from argparse import ArgumentParser
+from numpy import array_equal, load
+
+from .training import train
+from .saver import Saver
+from .generation import generate
+from .discrimination import discriminate
+
+
 def load_model_architecture(path):
     """ファイルからモデルのアーキテクチャを読み込む.
     読み込めるファイルは拡張子がjsonかymlであり、ファイルの書式がkerasの仕様に従っている必要がある。
@@ -5,10 +21,6 @@ def load_model_architecture(path):
     :param str path: モデルのアーキテクチャを保存したファイルのパス
     :return keras.Model model: モデル.
     """
-    from keras.models import model_from_config
-    from json import load as json_load
-    from yaml import load as yaml_load
-
     architecture = None
     extension = path.split('.')[-1]
     if extension not in ['json', 'yml']:
@@ -43,9 +55,6 @@ def ensure_file(path, extensions=[]):
     :param str extensions: ファイルが持つべき拡張子を指定する.
     :return bool: ファイルが確認できた場合のみTrue.それ以外はFalse.
     """
-    from os.path import isfile
-    from sys import stderr
-
     if not isfile(path):
         print('%s is not valid.' % path, file=stderr)
         return False
@@ -60,9 +69,6 @@ def ensure_directory(path):
     :param str path: ディレクトリのパス.
     :return bool: ディレクトリが確認できたらTrue.そうでなければFalse.
     """
-    from os.path import isdir
-    from sys import stderr
-
     if not isdir(path):
         print('%s is not valid.' % path, file=stderr)
         return False
@@ -76,8 +82,6 @@ def load_model_architecture_and_weight(architecture_path, weight_path):
                             Noneを指定した場合は重みパラメータを読み込まない.
     :return keras.Model: モデル.
     """
-    from sys import exit
-
     model = load_model_architecture(architecture_path)
     if weight_path is not None:
         if not ensure_file(weight_path, extensions=['h5']):
@@ -93,9 +97,6 @@ def ensure_input_shape(input_shape, data_shape, name):
     :param name: モデル名.
     :return: モデルの入力層の形状とデータの形状が等しいかどうか.
     """
-    from numpy import array_equal
-    from sys import stderr
-
     if not array_equal(input_shape, data_shape):
         print('input data shape %s does not equal to %s input layer shape %s' %
               (str(data_shape), name, str(input_shape)), file=stderr)
@@ -104,12 +105,6 @@ def ensure_input_shape(input_shape, data_shape, name):
 
 
 def command_train(args):
-    from keras.optimizers import Adam
-    from numpy import load, array_equal
-    from .training import train
-    from .saver import Saver
-    from sys import exit, stderr
-
     discriminator_path = args.discriminator
     discriminator_input_path = args.dinput
     discriminator_weight_path = args.dweight
@@ -198,11 +193,6 @@ def command_train(args):
           epoch_size, batch_size=batch_size, saver=saver)
 
 def command_generate(args):
-    from keras.models import load_model
-    from .generation import generate
-    from numpy import load, array_equal
-    from sys import exit, stderr
-
     generator_path = args.model
     dataset_path = args.x
     save_path = args.save
@@ -230,11 +220,6 @@ def command_generate(args):
 
 
 def command_discriminate(args):
-    from keras.models import load_model
-    from .discrimination import discriminate
-    from numpy import load, array_equal
-    from sys import exit, stderr
-
     discriminator_path = args.model
     dataset_path = args.x
     save_path = args.save
@@ -260,8 +245,6 @@ def command_discriminate(args):
 
 
 def parse_arg():
-    from argparse import ArgumentParser
-
     parser = ArgumentParser(description='Generative Adversarial Nets.')
     subparsers = parser.add_subparsers()
     train_parser = subparsers.add_parser('train', help='GANを訓練する.')
@@ -320,7 +303,6 @@ def parse_arg():
     return parser.parse_args()
 
 def main():
-    from sys import exit, stderr
     args = parse_arg()
     try:
         args.func()
