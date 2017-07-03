@@ -1,6 +1,0 @@
-numpy
-pillow
-keras
-matplotlib
-seaborn
-h5py

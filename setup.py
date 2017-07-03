@@ -1,9 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 from setuptools import setup, find_packages
 
 setup(name='GAN',
-      version='0.0.1',
-      description='Generative Adversarial Nets.',
+      version='0.2.1',
+      description='Generative Adversarial Nets utility.',
       author='Tomoshgie Shimomura',
       author_email='simomura@iu.nitech.ac.jp',
       packages=find_packages(),
@@ -11,6 +12,6 @@ setup(name='GAN',
                         'matplotlib', 'seaborn', 'h5py'],
       entry_points={
           'console_scripts': [
-              'gan = gan.gan:main',
+              'ganutil = gan.gan:main',
           ],
       })
