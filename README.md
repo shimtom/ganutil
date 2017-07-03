@@ -1,4 +1,4 @@
-# Generative Adversarial Nets
+# Generative Adversarial Nets Utils
 
 GANモデルに対する操作をまとめたパッケージ.
 
@@ -8,9 +8,9 @@ $ pip3 install -e .
 ```
 
 ## Package Usage
-* `gan.train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size, batch_size=32, preprocessor=default_preprocessor, saver=default_saver)`:  
+* `ganutil.train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size, batch_size=32, preprocessor=default_preprocessor, saver=default_saver)`:  
     GANを訓練する.  
-    また,エポックごとに学習結果を保存する.それぞれの損失,精度のグラフ,モデル,パラメータ,生成画像が保存される.保存にはgan.saverを使用する.  
+    また,エポックごとに学習結果を保存する.それぞれの損失,精度のグラフ,モデル,パラメータ,生成画像が保存される.保存にはganutil.saverを使用する.  
     * Arguments:  
         - `discriminator`: keras.Model.discriminatorモデル.出力の形状は(data size, 1)で値は[0, 1]の範囲でなければならない.
         - `generator`: keras.Model. generatorモデル.出力の形状は(size, height, width, ch)で各値は[-1, 1]の範囲でなければならない.
@@ -21,11 +21,11 @@ $ pip3 install -e .
         - `epoch_size`: int.最大のエポック数.
         - `batch_size`: int.バッチの大きさ.デフォルトは`32`.
         - `preprocessor`: keras.preprocessing.image.ImageDataGenerator.discriminatorの入力データに対して前処理を行ったデータのジェネレーター.デフォルトは何もしないジェネレーターを設定している.
-        - `saver`: gan.Saver.各値を保存するセーバー.デフォルトは`save`ディレクトリに各値を保存する.  
+        - `saver`: ganutil.Saver.各値を保存するセーバー.デフォルトは`save`ディレクトリに各値を保存する.  
 
-* `gan.discriminate(discriminator, dataset, save, batch_size=32)`  
+* `ganutil.discriminate(discriminator, dataset, save, batch_size=32)`  
     discriminatorを使用してデータセットに対して識別を行う.
-    識別結果はsaverに指定されているディレクトリに`discriminated.npz`で保存される.
+    識別結果はsaverに指定されているディレクトリに`discriminated.npy`で保存される.
     ファイルがすでに存在する場合は索引を付与して保存する.
 
     * Arguments
@@ -35,9 +35,9 @@ $ pip3 install -e .
         - `batch_size`: int.バッチサイズ.
 
 
-* `gan.generate(generator, dataset, save, batch_size=32)`
+* `ganutil.generate(generator, dataset, save, batch_size=32)`
     generatorを使用してデータセットから生成を行う.
-    識別結果はsaveに指定されているディレクトリに`generated.npz`で保存される.
+    識別結果はsaveに指定されているディレクトリに`generated.npy`で保存される.
     ファイルがすでに存在する場合は索引を付与して保存する.
 
     * Arguments
@@ -49,7 +49,7 @@ $ pip3 install -e .
 
 ## Command Usage
 ```
-usage: gan [-h] {train,discriminate,generate} ...
+usage: ganutil [-h] {train,discriminate,generate} ...
 
 Generative Adversarial Nets.
 
@@ -66,7 +66,7 @@ optional arguments:
 * `train` command
 
     ```
-    usage: gan train [-h] [--epoch EPOCH] [--batch BATCH] [--dweight DWEIGHT]
+    usage: ganutil train [-h] [--epoch EPOCH] [--batch BATCH] [--dweight DWEIGHT]
                       [--dlr DLR] [--dbeta1 DBETA1] [--gweight GWEIGHT]
                       [--glr GLR] [--gbeta1 GBETA1]
                       discriminator generator dinput ginput save
@@ -77,9 +77,8 @@ optional arguments:
       generator          generatorモデル.サポートしているファイルフォーマットは[.json|.yml].kerasの仕様に従った
                          ものでなければならない.
       dinput             discriminatorの訓練に使用する入力データセットのファイル名.サポートしているファイルフォーマットは[.
-                         npy|.npz].
-      ginput             generatorの訓練に使用する入力データセットのファイル名.サポートしているファイルフォーマットは[.npy|
-                         .npz].
+                         npy].
+      ginput             generatorの訓練に使用する入力データセットのファイル名.サポートしているファイルフォーマットは[.npy].
       save               学習結果を保存するディレクトリ.存在しない場合は終了する.
 
     optional arguments:
@@ -99,14 +98,14 @@ optional arguments:
 * `generate` command
 
     ```
-    usage: gan generate [-h] [-b BATCH] model x save
+    usage: ganutil generate [-h] [-b BATCH] model x save
 
     positional arguments:
       model                 学習済みgeneratorモデル.サポートしているファイルフォーマットは[.h5].kerasの仕様に従った
                             ものでなければならない.
-      x                     生成に使用される入力データセット.サポートしているファイルフォーマットは[.npy|.npz].
-      save                  結果を保存するディレクトリ.存在しない場合は終了する.ファイル名は`generated.npz`となる.すで
-                            に存在する場合はファイル名に索引を付ける.
+      x                     生成に使用される入力データセット.サポートしているファイルフォーマットは[.npy].
+      save                  結果を保存するファイルパス.拡張子がない場合は[.npy]で保存される.また,ディレクトリが存在しない場合は
+                            終了し,ファイルがすでに存在する場合は上書きする.
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -117,14 +116,14 @@ optional arguments:
 * `discriminate` command
 
     ```
-    usage: gan discriminate [-h] [-b BATCH] model x save
+    usage: ganutil discriminate [-h] [-b BATCH] model x save
 
     positional arguments:
       model                 学習済みdiscriminatorモデル.サポートしているファイルフォーマットは[.h5].kerasの仕様
                             に従ったものでなければならない.
-      x                     識別に使用されるデータセット.サポートしているファイルフォーマットは[.npy|.npz].
-      save                  結果を保存するディレクトリ.存在しない場合は終了する.ファイル名は`discriminated.npz`とな
-                            る.すでに存在する場合はファイル名に索引を付ける.
+      x                     識別に使用されるデータセット.サポートしているファイルフォーマットは[.npy].
+      save                  結果を保存するファイルパス.拡張子がない場合は[.npy]で保存される.また,ディレクトリが存在しない場合は
+                            終了し,ファイルがすでに存在する場合は上書きする.
 
     optional arguments:
       -h, --help            show this help message and exit
