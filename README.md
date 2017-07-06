@@ -4,7 +4,8 @@ GANモデルに対する操作をまとめたパッケージ.
 
 ## Install
 ```
-$ pip3 install -e .
+$ curl -O https://github.com/shimtom/ganutil/releases/download/ver0.2.4/ganutil-0.2.4-py3-none-any.whl
+$ pip3 install ganutil-0.2.4-py3-none-any.whl
 ```
 
 ## Package Usage
