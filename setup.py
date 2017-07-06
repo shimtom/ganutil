@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='ganutil',
-      version='0.2.2',
+      version='0.2.3',
       description='Generative Adversarial Nets utility.',
       author='shimtom',
       author_email='ii00zero1230@gmail.com',
