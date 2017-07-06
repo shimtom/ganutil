@@ -57,7 +57,7 @@ def train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size
         d_loss, g_loss = 0., 0.
         d_acc, g_acc = 0., 0.
         d = preprocessor.flow(d_inputs, np.ones(len(d_inputs), dtype=np.int64), batch_size=batch_size)
-        g = set_input_generator(g_inputs)
+        g = _set_input_generator(g_inputs)
         # discriminator の 入力データジェネレーターを回す
         for step, samples in enumerate(d):
             if step + 1 > step_size:
@@ -67,7 +67,7 @@ def train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size
             n = len(samples[0])
 
             # train discriminator
-            x = np.concatenate((samples[0], generate(generator, g(n))))
+            x = np.concatenate((samples[0], _generate(generator, g(n))))
             y = np.concatenate((samples[1], np.zeros(n))).astype(np.int64)
             dl, da = discriminator.train_on_batch(x, y)
 
@@ -101,9 +101,9 @@ def train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size
         saver.parameter(discriminator, generator)
         saver.loss(*losses)
         saver.accuracy(*accuracies)
-        saver.image(generate(generator, g(25)), id=epoch)
+        saver.image(_generate(generator, g(25)), id=epoch)
 
-def set_input_generator(data):
+def _set_input_generator(data):
     data_size = len(data)
     indices = np.random.permutation(data_size)
     index = 0
@@ -119,7 +119,7 @@ def set_input_generator(data):
 
     return generate
 
-def generate(generator, inputs, to_image=False):
+def _generate(generator, inputs, to_image=False):
     generated = np.array(generator.predict_on_batch(inputs))
     if to_image:
         generated = generated * 127.5 + 127.5
