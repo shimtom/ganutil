@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
-from math import ceil
-from keras.preprocessing.image import ImageDataGenerator
-from collections import namedtuple
-from .saver import Saver
-import numpy as np
 import time
+from collections import namedtuple
+from math import ceil
+
+import numpy as np
+from keras.preprocessing.image import ImageDataGenerator
+
+from .saver import Saver
 
 DataSet = namedtuple('DataSet', ['x', 'y', 'size'])
 Gan = namedtuple('Gan', ['d', 'g'])
 
 default_preprocessor = ImageDataGenerator()
 default_saver = Saver('save')
+
 
 def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_size=32,
           preprocessor=default_preprocessor, saver=default_saver):
@@ -44,7 +47,8 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
 
     for epoch in range(epoch_size):
         start_epoch = time.time()
-        d = preprocessor.flow(d_inputs, np.ones(len(d_inputs), dtype=np.int64), batch_size=batch_size)
+        d = preprocessor.flow(d_inputs, np.ones(
+            len(d_inputs), dtype=np.int64), batch_size=batch_size)
         g = _set_input_generator(g_inputs)
         # discriminator の 入力データジェネレーターを回す
         for step, samples in enumerate(d):
@@ -90,9 +94,9 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
         for k, v in g_total.items():
             g_total.setdefault(k, []).append(g_result.get(k, 0.) / data_size)
 
-
         # print result
-        print('time %.3fs epoch %d / %d d: %s g: %s' % (time.time() - start_epoch, epoch, epoch_size, d_total, g_total))
+        print('time %.3fs epoch %d / %d d: %s g: %s' %
+              (time.time() - start_epoch, epoch, epoch_size, d_total, g_total))
 
         # save
         saver.model(discriminator, generator)
@@ -101,6 +105,7 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
         saver.image(_generate(generator, g(25)), id=epoch)
 
     print('time %.3fs' % (time.time() - start))
+
 
 def _set_input_generator(data):
     data_size = len(data)
@@ -117,6 +122,7 @@ def _set_input_generator(data):
         return inputs
 
     return generate
+
 
 def _generate(generator, inputs, to_image=False):
     generated = np.array(generator.predict_on_batch(inputs))

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from numpy import save, savez, savetxt
+from numpy import save, savetxt, savez
 
 
 def discriminate(discriminator, dataset, save_path, batch_size=32):
