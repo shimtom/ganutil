@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
 from os.path import join
-import numpy as np
+
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 
 from .ensure_existing import ensure_directory
+
+matplotlib.use('Agg')
+
 
 class Saver:
     """学習の各値を保存する機能を持ったクラス.
     train()でのみ使用される.
     """
+
     def __init__(self, root, name='GAN'):
         """
         :param str root: 保存ディレクトリ.
@@ -82,7 +86,6 @@ class Saver:
             plt.savefig(join(dir_path, '%s.png' % name))
             plt.close()
 
-
     def loss(self, discriminator_loss, generator_loss):
         self._generator.loss(generator_loss)
         self._discriminator.loss(discriminator_loss)
@@ -138,6 +141,7 @@ class Saver:
         plt.savefig(join(path, 'image.png'))
         plt.close()
 
+
 class _Saver:
     def __init__(self, name, root):
         self._name = name
@@ -164,10 +168,9 @@ class _Saver:
             plt.figure()
             plt.plot(value)
             plt.xlim([0, len(value)])
-            plt.title('%s %s' %(self._name, name))
+            plt.title('%s %s' % (self._name, name))
             plt.savefig(join(dir_path, '%s.png' % self._name))
             plt.close()
-
 
     def loss(self, losses):
         np.save(join(self._loss_dir, self._name), losses)
