@@ -6,6 +6,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from .ensure_existing import ensure_directory
 
 class Saver:
     """学習の各値を保存する機能を持ったクラス.
@@ -58,6 +59,29 @@ class Saver:
             np.savez(path, arr)
             return
         np.save(path, arr)
+
+    def scalars(self, discriminator_total, generator_total):
+        self._discriminator.scalars(discriminator_total)
+        self._generator.scalars(generator_total)
+
+        sns.set(style='darkgrid', palette='deep', color_codes=True)
+
+        for name in discriminator_total.keys():
+            dir_path = join(self._root, name)
+            ensure_directory(dir_path)
+
+            d = discriminator_total.get(name, [])
+            g = generator_total.get(name, [])
+
+            plt.figure()
+            plt.plot(d, label='discriminator %s' % name)
+            plt.plot(g, label='generator %s' % name)
+            plt.xlim([0, max(len(d), len(g))])
+            plt.legend()
+            plt.tight_layout()
+            plt.savefig(join(dir_path, '%s.png' % name))
+            plt.close()
+
 
     def loss(self, discriminator_loss, generator_loss):
         self._generator.loss(generator_loss)
@@ -118,6 +142,7 @@ class _Saver:
     def __init__(self, name, root):
         self._name = name
         self._root = root
+        self._scalars_dir = join(root, 'scalars')
         self._loss_dir = join(root, 'losses')
         self._accuracy_dir = join(root, 'accuracy')
 
@@ -128,6 +153,21 @@ class _Saver:
     def summary(self, summary):
         with open(join(self._root, '%s.txt' % self._name), 'w') as f:
             f.write(summary)
+
+    def scalars(self, scalars_dict):
+        sns.set(style='darkgrid', palette='deep', color_codes=True)
+        for name, value in scalars_dict.itmes():
+            dir_path = join(self._scalars_dir, name)
+            ensure_directory(dir_path)
+            np.save(join(dir_path, name), np.array(value))
+
+            plt.figure()
+            plt.plot(value)
+            plt.xlim([0, len(value)])
+            plt.title('%s %s' %(self._name, name))
+            plt.savefig(join(dir_path, '%s.png' % self._name))
+            plt.close()
+
 
     def loss(self, losses):
         np.save(join(self._loss_dir, self._name), losses)
@@ -151,9 +191,3 @@ class _Saver:
         plt.title(self._name)
         plt.savefig(join(self._accuracy_dir, '%s.png' % self._name))
         plt.close()
-
-
-def ensure_directory(path):
-    import os
-    if not os.path.isdir(path):
-        os.makedirs(path)

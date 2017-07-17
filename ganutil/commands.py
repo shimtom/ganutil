@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from keras.models import model_from_config, load_model
+from keras.models import Sequential, model_from_config, load_model
 from keras.optimizers import Adam
 from json import load as json_load
 from yaml import load as yaml_load
@@ -96,8 +96,16 @@ def train(args):
     }
     saver.config(config)
 
+    discriminator.compile(loss='binary_crossentropy', optimizer=d_opt, metrics=['accuracy'])
+
+    # compile for generator training
+    discriminator.trainable = False
+    gan = Sequential([generator, discriminator])
+    gan.compile(loss='binary_crossentropy', optimizer=g_opt, metrics=['accuracy'])
+    discriminator.trainable = True
+
     # 訓練開始
-    train_gan(discriminator, generator, d_opt, g_opt, discriminator_inputs, generator_inputs,
+    train_gan(discriminator, generator, gan, discriminator_inputs, generator_inputs,
               epoch_size, batch_size=batch_size, saver=saver)
 
 def generate(args):

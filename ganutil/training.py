@@ -5,6 +5,7 @@ from keras.preprocessing.image import ImageDataGenerator
 from collections import namedtuple
 from .saver import Saver
 import numpy as np
+import time
 
 DataSet = namedtuple('DataSet', ['x', 'y', 'size'])
 Gan = namedtuple('Gan', ['d', 'g'])
@@ -12,17 +13,16 @@ Gan = namedtuple('Gan', ['d', 'g'])
 default_preprocessor = ImageDataGenerator()
 default_saver = Saver('save')
 
-def train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size, batch_size=32,
+def train(discriminator, generator, gan, d_inputs, g_inputs, epoch_size, batch_size=32,
           preprocessor=default_preprocessor, saver=default_saver):
     """GANを訓練する.
     また,エポックごとに学習結果を保存する.それぞれの損失,精度のグラフ,モデル,パラメータ,生成画像が保存される.保存にはgan.saverを使用する.
-
-    :param keras.Model discriminator: discriminatorモデル.
+    :param keras.Model discriminator: compile済みdiscriminatorモデル. 訓練可能でなければならない.
         出力の形状は(data size, 1)で値は[0, 1]の範囲でなければならない.
-    :param keras.Model generator: generatorモデル.
+    :param keras.Model generator: ganに使用したgeneratorモデル.
         出力の形状は(size, height, width, ch)で各値は[-1, 1]の範囲でなければならない.
-    :param keras.Optimizer d_opt: discriminatorの学習に使用する最適化.
-    :param keras.Optimizer g_opt: generatorの学習に使用する最適化.
+    :param keras.Model gan: compile済みgenerator + discriminatorモデル.
+        generatorは訓練可能でなければならないがdiscriminatorは訓練可能であってはならない.
     :param numpy.ndarray d_inputs: discriminatorの学習に使用する入力データセット.
     :param numpy.ndarray g_inputs: discriminatorの学習に使用する入力データセット.
     :param int epoch_size: 最大のエポック数.
@@ -33,75 +33,75 @@ def train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size
     :param Saver saver: 各値を保存するセーバー.
         デフォルトは`save`ディレクトリに各値を保存する.
     """
-    # compile for discriminator training
-    discriminator.compile(loss='binary_crossentropy',
-                          optimizer=d_opt,
-                          metrics=['accuracy'])
-
-    # compile for generator training
-    discriminator.trainable = False
-    gan = Sequential([generator, discriminator])
-    gan.compile(loss='binary_crossentropy',
-                optimizer=g_opt,
-                metrics=['accuracy'])
-
-    # save model architecture
     saver.architecture(discriminator, generator)
 
-    losses = Gan([], [])
-    accuracies = Gan([], [])
     data_size = len(d_inputs)
     step_size = int(ceil(len(d_inputs) / batch_size))
 
+    g_total = dict()
+    d_total = dict()
+
+    start = time.time()
+
     for epoch in range(epoch_size):
-        d_loss, g_loss = 0., 0.
-        d_acc, g_acc = 0., 0.
+        start_epoch = time.time()
         d = preprocessor.flow(d_inputs, np.ones(len(d_inputs), dtype=np.int64), batch_size=batch_size)
         g = _set_input_generator(g_inputs)
         # discriminator の 入力データジェネレーターを回す
         for step, samples in enumerate(d):
             if step + 1 > step_size:
                 break
-
+            start_step = time.time()
             # real batch size
             n = len(samples[0])
 
             # train discriminator
             x = np.concatenate((samples[0], _generate(generator, g(n))))
             y = np.concatenate((samples[1], np.zeros(n))).astype(np.int64)
-            dl, da = discriminator.train_on_batch(x, y)
+            d_scalars = discriminator.train_on_batch(x, y)
+            if len(discriminator.metrics_names) == 1:
+                d_scalars = [d_scalars]
+            d_result = dict()
+            for s, n in zip(d_scalars, discriminator.metrics_names):
+                d_result[n] = s
 
             # train generator
             x = g(n)
             y = np.ones(n, dtype=np.int64)
-            gl, ga = gan.train_on_batch(x, y)
+            g_scalars = gan.train_on_batch(x, y)
+            if len(gan.metrics_names) == 1:
+                g_scalars = [d_scalars]
+            g_result = dict()
+            for s, n in zip(g_scalars, gan.metrics_names):
+                g_result[n] = s
 
             # print result per step
-            print('epoch %d / %d [%d] loss(d, g): (%f, %f) acc(d, g): (%.3f, %.3f)' % (epoch, epoch_size, step, dl, gl, da, ga))
+            print('time %.3fs epoch %d / %d [%d] d: %s g: %s' % (
+                  time.time() - start_step, epoch, epoch_size, str(d_result), str(g_result)))
 
-            # compute toal loss and accuracy
-            d_loss, g_loss = d_loss + dl * n, g_loss + gl * n
-            d_acc, g_acc = d_acc + da * n, g_acc + ga * n
+            # compute sum
+            for k, v in d_result.items():
+                g_result[k] = g_result.get(k, 0.) + v * n
+            for k, v in g_result.items():
+                g_result[k] = g_result.get(k, 0.) + v * n
 
-        d_loss /= data_size
-        g_loss /= data_size
-        losses.d.append(d_loss)
-        losses.g.append(g_loss)
+        # compute total average
+        for k, v in g_result.items():
+            d_total.setdefault(k, []).append(g_result.get(k, 0.) / data_size)
+        for k, v in g_total.items():
+            g_total.setdefault(k, []).append(g_result.get(k, 0.) / data_size)
 
-        g_acc /= data_size
-        d_acc /= data_size
-        accuracies.g.append(g_acc)
-        accuracies.d.append(d_acc)
 
         # print result
-        print('epoch %d / %d loss(d, g): (%f, %f) acc(d, g): (%.3f, %.3f)' % (epoch, epoch_size, d_loss, g_loss, d_acc, g_acc))
+        print('time %.3fs epoch %d / %d d: %s g: %s' % (time.time() - start_epoch, epoch, epoch_size, d_total, g_total))
 
         # save
         saver.model(discriminator, generator)
         saver.parameter(discriminator, generator)
-        saver.loss(*losses)
-        saver.accuracy(*accuracies)
+        saver.scalars(d_total, g_total)
         saver.image(_generate(generator, g(25)), id=epoch)
+
+    print('time %.3fs' % (time.time() - start))
 
 def _set_input_generator(data):
     data_size = len(data)
