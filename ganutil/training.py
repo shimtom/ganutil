@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from math import ceil
-from keras.models import Sequential
 from keras.preprocessing.image import ImageDataGenerator
 from collections import namedtuple
 from .saver import Saver
@@ -13,16 +12,16 @@ Gan = namedtuple('Gan', ['d', 'g'])
 default_preprocessor = ImageDataGenerator()
 default_saver = Saver('save')
 
-def train(discriminator, generator, gan, d_inputs, g_inputs, epoch_size, batch_size=32,
+def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_size=32,
           preprocessor=default_preprocessor, saver=default_saver):
     """GANを訓練する.
     また,エポックごとに学習結果を保存する.それぞれの損失,精度のグラフ,モデル,パラメータ,生成画像が保存される.保存にはgan.saverを使用する.
+    :param keras.Model gan: compile済みgenerator + discriminatorモデル.
+        generatorは訓練可能でなければならないがdiscriminatorは訓練可能であってはならない.
     :param keras.Model discriminator: compile済みdiscriminatorモデル. 訓練可能でなければならない.
         出力の形状は(data size, 1)で値は[0, 1]の範囲でなければならない.
     :param keras.Model generator: ganに使用したgeneratorモデル.
         出力の形状は(size, height, width, ch)で各値は[-1, 1]の範囲でなければならない.
-    :param keras.Model gan: compile済みgenerator + discriminatorモデル.
-        generatorは訓練可能でなければならないがdiscriminatorは訓練可能であってはならない.
     :param numpy.ndarray d_inputs: discriminatorの学習に使用する入力データセット.
     :param numpy.ndarray g_inputs: discriminatorの学習に使用する入力データセット.
     :param int epoch_size: 最大のエポック数.
