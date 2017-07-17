@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from math import ceil
-from keras.models import Sequential
 from keras.preprocessing.image import ImageDataGenerator
 from collections import namedtuple
 from .saver import Saver
+import keras.callbacks as clbks
 import numpy as np
 import time
 
@@ -12,6 +12,39 @@ Gan = namedtuple('Gan', ['d', 'g'])
 
 default_preprocessor = ImageDataGenerator()
 default_saver = Saver('save')
+
+def fit_generator(gan, discriminator, generator, d_generator, g_generator, step_per_epoch, d_iteration_per_step=1, g_iteration_per_step=1, epochs=1, callbacks=None, max_queue_size=10, workers=1, use_multiprocessing=False, initial_epoch=0):
+    pass
+    callbacks = clbks.Call(callbacks)
+
+    # TODO: add callbacks.gan_on_train_begin()
+    # TODO: add callbacks.discriminator_on_train_begin()
+    # TODO: add callbacks.generator_on_train_begin()
+    for epoch in range(initial_epoch, epochs):
+        # TODO: add callbacks.gan_on_epoch_begin()
+        # TODO: add callbacks.discriminator_on_epoch_begin()
+        # TODO: add callbacks.generator_on_epoch_begin()
+        for step in range(step_per_epoch):
+            # TODO: add callbacks.gan_on_batch_begin()
+            for index, samples in enumerate(d_generator):
+                # TODO: add callbacks.discriminator_on_batch_begin()
+                discriminator.train_on_batch(*samples)
+                # TODO: add callbacks.discriminator_on_batch_end()
+                if index + 1 == d_iteration_per_step:
+                    break
+            for index, samples in enumerate(g_generator):
+                # TODO: add callbacks.generator_on_batch_begin()
+                gan.train_on_batch(*samples)
+                # TODO: add callbacks.generator_on_batch_end()
+                if index + 1 == g_iteration_per_step:
+                    break
+            # TODO: add callbacks.gan_on_batch_end()
+        # TODO: add callbacks.gan_on_epoch_end()
+        # TODO: add callbacks.discriminator_on_epoch_end()
+        # TODO: add callbacks.generator_on_epoch_end()
+    # TODO: add callbacks.gan_on_train_end()
+    # TODO: add callbacks.discriminator_on_train_end()
+    # TODO: add callbacks.generator_on_train_end()
 
 def train(discriminator, generator, gan, d_inputs, g_inputs, epoch_size, batch_size=32,
           preprocessor=default_preprocessor, saver=default_saver):
