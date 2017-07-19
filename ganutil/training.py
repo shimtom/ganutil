@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import copy
 import time
 import warnings
 from math import ceil
@@ -7,7 +8,7 @@ import keras.callbacks as cbks
 import numpy as np
 from keras.preprocessing.image import ImageDataGenerator
 from keras.utils import GeneratorEnqueuer, OrderedEnqueuer, Sequence
-import copy
+
 from .saver import Saver
 
 
