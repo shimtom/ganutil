@@ -1,51 +1,90 @@
 # -*- coding: utf-8 -*-
 import time
-
-from collections import namedtuple
+import warnings
 from math import ceil
 
-import keras.callbacks as clbks
 import numpy as np
 from keras.preprocessing.image import ImageDataGenerator
+from keras.utils import GeneratorEnqueuer, OrderedEnqueuer, Sequence
 
 from .saver import Saver
 
-DataSet = namedtuple('DataSet', ['x', 'y', 'size'])
-Gan = namedtuple('Gan', ['d', 'g'])
 
 default_preprocessor = ImageDataGenerator()
 default_saver = Saver('save')
 
 
-def fit_generator(gan, discriminator, generator, d_generator, g_generator, step_per_epoch, d_iteration_per_step=1, g_iteration_per_step=1, epochs=1, callbacks=None, max_queue_size=10, workers=1, use_multiprocessing=False, initial_epoch=0):
-    pass
-    callbacks = clbks.Call(callbacks)
+def fit_generator(gan, discriminator, generator, d_generator, g_generator, steps_per_epoch, d_iteration_per_step=1, g_iteration_per_step=1, epochs=1, max_queue_size=10, workers=1, use_multiprocessing=False, shuffle=True, initial_epoch=0):
+    d_is_sequence = isinstance(d_generator, Sequence)
+    g_is_sequence = isinstance(g_generator, Sequence)
+
+    if not (d_is_sequence and g_is_sequence) and use_multiprocessing and workers > 1:
+        warnings.warn(
+            UserWarning('Using a generator with `use_multiprocessing=True`'
+                        ' and multiple workers may duplicate your data.'
+                        ' Please consider using the`keras.utils.Sequence'
+                        ' class.'))
+
+    d_enqueuer = None
+    g_enqueuer = None
+
+    wait_time = 0.01  # in seconds
 
     # TODO: add callbacks.gan_on_train_begin()
     # TODO: add callbacks.discriminator_on_train_begin()
     # TODO: add callbacks.generator_on_train_begin()
-    for epoch in range(initial_epoch, epochs):
-        # TODO: add callbacks.gan_on_epoch_begin()
-        # TODO: add callbacks.discriminator_on_epoch_begin()
-        # TODO: add callbacks.generator_on_epoch_begin()
-        for step in range(step_per_epoch):
-            # TODO: add callbacks.gan_on_batch_begin()
-            for index, samples in enumerate(d_generator):
-                # TODO: add callbacks.discriminator_on_batch_begin()
-                discriminator.train_on_batch(*samples)
-                # TODO: add callbacks.discriminator_on_batch_end()
-                if index + 1 == d_iteration_per_step:
-                    break
-            for index, samples in enumerate(g_generator):
-                # TODO: add callbacks.generator_on_batch_begin()
-                gan.train_on_batch(*samples)
-                # TODO: add callbacks.generator_on_batch_end()
-                if index + 1 == g_iteration_per_step:
-                    break
-            # TODO: add callbacks.gan_on_batch_end()
-        # TODO: add callbacks.gan_on_epoch_end()
-        # TODO: add callbacks.discriminator_on_epoch_end()
-        # TODO: add callbacks.generator_on_epoch_end()
+
+    try:
+        if d_is_sequence:
+            d_enqueuer = OrderedEnqueuer(d_generator,
+                                         use_multiprocessing=use_multiprocessing,
+                                         shuffle=shuffle)
+        else:
+            d_enqueuer = GeneratorEnqueuer(d_generator,
+                                           use_multiprocessing=use_multiprocessing,
+                                           wait_time=wait_time)
+        d_enqueuer.start(workers=workers, max_queue_size=max_queue_size)
+        d_sample_generator = d_enqueuer.get()
+
+        if g_is_sequence:
+            g_enqueuer = OrderedEnqueuer(g_generator,
+                                         use_multiprocessing=use_multiprocessing,
+                                         shuffle=shuffle)
+        else:
+            g_enqueuer = GeneratorEnqueuer(g_generator,
+                                           use_multiprocessing=use_multiprocessing,
+                                           wait_time=wait_time)
+        g_enqueuer.start(workers=workers, max_queue_size=max_queue_size)
+        g_output_generator = g_enqueuer.get()
+
+        for epoch in range(initial_epoch, epochs):
+            # TODO: add callbacks.gan_on_epoch_begin()
+            # TODO: add callbacks.discriminator_on_epoch_begin()
+            # TODO: add callbacks.generator_on_epoch_begin()
+            for step in range(steps_per_epoch):
+                # TODO: add callbacks.gan_on_batch_begin()
+                for index in range(d_iteration_per_step):
+                    # TODO: add callbacks.discriminator_on_batch_begin()
+                    samples = next(d_sample_generator)
+                    discriminator.train_on_batch(*samples)
+                    # TODO: add callbacks.discriminator_on_batch_end()
+
+                for index in range(g_iteration_per_step):
+                    # TODO: add callbacks.generator_on_batch_begin()
+                    samples = next(g_output_generator)
+                    gan.train_on_batch(*samples)
+                    # TODO: add callbacks.generator_on_batch_end()
+                # TODO: add callbacks.gan_on_batch_end()
+            # TODO: add callbacks.gan_on_epoch_end()
+            # TODO: add callbacks.discriminator_on_epoch_end()
+            # TODO: add callbacks.generator_on_epoch_end()
+
+    finally:
+        if d_enqueuer is not None:
+            d_enqueuer.stop()
+        if g_enqueuer is not None:
+            g_enqueuer.stop()
+
     # TODO: add callbacks.gan_on_train_end()
     # TODO: add callbacks.discriminator_on_train_end()
     # TODO: add callbacks.generator_on_train_end()
