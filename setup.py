@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(name='ganutil',
-      version='0.2.4',
+      version='0.3.1',
       description='Generative Adversarial Nets utility.',
       author='shimtom',
       author_email='ii00zero1230@gmail.com',

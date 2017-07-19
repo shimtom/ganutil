@@ -4,19 +4,18 @@ GANモデルに対する操作をまとめたパッケージ.
 
 ## Install
 ```
-$ curl -O https://github.com/shimtom/ganutil/releases/download/ver0.2.4/ganutil-0.2.4-py3-none-any.whl
+$ curl -O https://github.com/shimtom/ganutil/releases/download/ver0.3.1/ganutil-0.3.1-py3-none-any.whl
 $ pip3 install ganutil-0.2.4-py3-none-any.whl
 ```
 
 ## Package Usage
-* `ganutil.train(discriminator, generator, d_opt, g_opt, d_inputs, g_inputs, epoch_size, batch_size=32, preprocessor=default_preprocessor, saver=default_saver)`:  
+* `ganutil.train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_size=32, preprocessor=default_preprocessor, saver=default_saver)`:  
     GANを訓練する.  
     また,エポックごとに学習結果を保存する.それぞれの損失,精度のグラフ,モデル,パラメータ,生成画像が保存される.保存にはganutil.saverを使用する.  
     * Arguments:  
-        - `discriminator`: keras.Model.discriminatorモデル.出力の形状は(data size, 1)で値は[0, 1]の範囲でなければならない.
-        - `generator`: keras.Model. generatorモデル.出力の形状は(size, height, width, ch)で各値は[-1, 1]の範囲でなければならない.
-        - `d_opt`: keras.Optimizer.discriminatorの学習に使用する最適化.
-        - `g_opt`: keras.Optimizer.generatorの学習に使用する最適化.
+        - `gan`: keras.Model.compile済みgenerator + discriminatorモデル.generatorは訓練可能でなければならないがdiscriminatorは訓練可能であってはならない.
+        - `discriminator`: keras.Model.compile済みdiscriminatorモデル.訓練可能でなければならない.出力の形状は(data size, 1)で値は[0, 1]の範囲でなければならない.
+        - `generator`: keras.Model.ganに使用したgeneratorモデル.出力の形状は(size, height, width, ch)で各値は[-1, 1]の範囲でなければならない.
         - `d_inputs`: numpy.ndarray.discriminatorの学習に使用する入力データセット.
         - `g_inputs`: numpy.ndarray.discriminatorの学習に使用する入力データセット.
         - `epoch_size`: int.最大のエポック数.

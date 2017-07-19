@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
-from keras.models import Sequential, model_from_config, load_model
-from keras.optimizers import Adam
 from json import load as json_load
-from yaml import load as yaml_load
 from sys import exit, stderr
-from numpy import array_equal, load
 
+from keras.models import Sequential, load_model, model_from_config
+from keras.optimizers import Adam
+from numpy import array_equal, load
+from yaml import load as yaml_load
+
+from .discrimination import discriminate as gan_discriminate
+from .ensure_existing import (ensure_directory, ensure_file, ensure_files,
+                              ensure_input_shape)
+from .generation import generate as gan_generate
 from .saver import Saver
 from .training import train as train_gan
-from .generation import generate as gan_generate
-from .discrimination import discriminate as gan_discriminate
-from .ensure_existing import ensure_file, ensure_files, ensure_directory, ensure_input_shape
+
 
 def train(args):
     discriminator_path = args.discriminator
@@ -36,25 +39,29 @@ def train(args):
         exit(1)
 
     # discriminatorモデルと入力データを読み込み、形状が正しいかを確かめる.
-    discriminator = _load_model_architecture_and_weight(discriminator_path, discriminator_weight_path)
+    discriminator = _load_model_architecture_and_weight(
+        discriminator_path, discriminator_weight_path)
     discriminator_inputs = load(discriminator_input_path)
     if not ensure_input_shape(discriminator.inputs[0].shape[1:], discriminator_inputs.shape[1:], 'discriminator'):
         exit(1)
     # discriminatorの出力層の形状を確かめる.
     discriminator_output_shape = discriminator.outputs[-1].shape[1:]
     if not (len(discriminator_output_shape) == 1 and discriminator_output_shape[0] == 1):
-        print('discriminator output shape %s is not supported' % (str(discriminator_output_shape)), file=stderr)
+        print('discriminator output shape %s is not supported' %
+              (str(discriminator_output_shape)), file=stderr)
         exit(1)
 
     # generatorモデルと入力データを読み込み、形状が正しいかを確かめる.
-    generator = _load_model_architecture_and_weight(generator_path, generator_weight_path)
+    generator = _load_model_architecture_and_weight(
+        generator_path, generator_weight_path)
     generator_inputs = load(generator_input_path)
     if not ensure_input_shape(generator.inputs[0].shape[1:], generator_inputs.shape[1:], 'generator'):
         exit(1)
     # generatorの出力層の形状を確かめる
     generator_output_shape = generator.outputs[-1].shape[1:]
     if not array_equal(generator_output_shape, discriminator_inputs.shape[1:]):
-        print('generator output shape %s is not valid' % (str(generator_output_shape)), file=stderr)
+        print('generator output shape %s is not valid' %
+              (str(generator_output_shape)), file=stderr)
         exit(1)
 
     saver = Saver(save_path)
@@ -96,17 +103,20 @@ def train(args):
     }
     saver.config(config)
 
-    discriminator.compile(loss='binary_crossentropy', optimizer=d_opt, metrics=['accuracy'])
+    discriminator.compile(loss='binary_crossentropy',
+                          optimizer=d_opt, metrics=['accuracy'])
 
     # compile for generator training
     discriminator.trainable = False
     gan = Sequential([generator, discriminator])
-    gan.compile(loss='binary_crossentropy', optimizer=g_opt, metrics=['accuracy'])
+    gan.compile(loss='binary_crossentropy',
+                optimizer=g_opt, metrics=['accuracy'])
     discriminator.trainable = True
 
     # 訓練開始
     train_gan(discriminator, generator, gan, discriminator_inputs, generator_inputs,
               epoch_size, batch_size=batch_size, saver=saver)
+
 
 def generate(args):
     generator_path = args.model
@@ -150,6 +160,7 @@ def discriminate(args):
 
     gan_discriminate(discriminator, dataset, save_path, batch_size=batch_size)
 
+
 def _load_model_architecture_and_weight(architecture_path, weight_path):
     """モデルのアーキテクチャと重みパラメータを読み込む.
 
@@ -165,6 +176,7 @@ def _load_model_architecture_and_weight(architecture_path, weight_path):
         model.load_weights(weight_path)
 
     return model
+
 
 def _load_model_architecture(path):
     """ファイルからモデルのアーキテクチャを読み込む.
