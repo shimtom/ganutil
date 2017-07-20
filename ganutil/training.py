@@ -7,6 +7,7 @@ import numpy as np
 from keras.preprocessing.image import ImageDataGenerator
 from keras.utils import GeneratorEnqueuer, OrderedEnqueuer, Sequence
 
+from .callbacks import ProgbarLogger
 from .saver import Saver
 
 
@@ -56,7 +57,14 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
         discriminator.history = cbks.History()
         d_callbacks = (d_callbacks or []) + [discriminator.history]
         d_callbacks += [cbks.BaseLogger(),
-                        cbks.ProgbarLogger(count_mode='steps')]
+                        ProgbarLogger(count_mode='steps')]
+        for c in d_callbacks:
+            if isinstance(c, cbks.ProgbarLogger):
+                warnings.warn(UserWarning('Using a `keras.callbacks.ProgbarLogger, `'
+                                          ' it can\'t distinguishe whether output is generator\'s or discriminator\'s.'
+                                          ' Please consider using the`ganutil.callbacks.ProgbarLogger'
+                                          ' class.'))
+
         d_callbacks = cbks.CallbackList(d_callbacks)
         d_callbacks.set_model(discriminator)
         d_callbacks.set_params({
@@ -68,9 +76,21 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
         })
 
         gan.history = cbks.History()
-        g_callbacks = (d_callbacks or []) + [gan.history]
+        g_callbacks = (g_callbacks or []) + [gan.history]
         g_callbacks += [cbks.BaseLogger(),
                         cbks.ProgbarLogger(count_mode='steps')]
+        for c in g_callbacks:
+            if isinstance(c, cbks.ProgbarLogger):
+                warnings.warn(UserWarning('Using a `keras.callbacks.ProgbarLogger, `'
+                                          ' it can\'t distinguishe whether output is generator\'s or discriminator\'s.'
+                                          ' Please consider using the`ganutil.callbacks.ProgbarLogger'
+                                          ' class.'))
+            if isinstance(c, cbks.ModelCheckpoint):
+                warnings.warn(UserWarning('Using a `keras.callbacks.ModelCheckpoint, `'
+                                          ' it can\'t save only generator model.'
+                                          ' Please consider using the`ganutil.callbacks.GanModelCheckpoint'
+                                          ' class.'))
+
         g_callbacks = cbks.CallbackList(g_callbacks)
         g_callbacks.set_model(gan)
         g_callbacks.set_params({
@@ -128,7 +148,7 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
         if g_enqueuer is not None:
             g_enqueuer.stop()
 
-    return discriminator.history, generator.history
+    return discriminator.history, gan.history
 
 
 def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_size=32, d_callbacks=None, g_callbacks=None, preprocessor=default_preprocessor):
@@ -156,6 +176,12 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
     d_callbacks = (d_callbacks or []) + [discriminator.history]
     d_callbacks += [cbks.BaseLogger(),
                     cbks.ProgbarLogger(count_mode='steps')]
+    for c in d_callbacks:
+        if isinstance(c, cbks.ProgbarLogger):
+            warnings.warn(UserWarning('Using a `keras.callbacks.ProgbarLogger, `'
+                                      ' it can\'t distinguishe whether output is generator\'s or discriminator\'s.'
+                                      ' Please consider using the`ganutil.callbacks.ProgbarLogger'
+                                      ' class.'))
     d_callbacks = cbks.CallbackList(d_callbacks)
     d_callbacks.set_model(discriminator)
     d_callbacks.set_params({
@@ -168,9 +194,21 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
     })
 
     gan.history = cbks.History()
-    g_callbacks = (d_callbacks or []) + [gan.history]
+    g_callbacks = (g_callbacks or []) + [gan.history]
     g_callbacks += [cbks.BaseLogger(),
                     cbks.ProgbarLogger(count_mode='steps')]
+    for c in g_callbacks:
+        if isinstance(c, cbks.ProgbarLogger):
+            warnings.warn(UserWarning('Using a `keras.callbacks.ProgbarLogger, `'
+                                      ' it can\'t distinguishe whether output is generator\'s or discriminator\'s.'
+                                      ' Please consider using the`ganutil.callbacks.ProgbarLogger'
+                                      ' class.'))
+        if isinstance(c, cbks.ModelCheckpoint):
+            warnings.warn(UserWarning('Using a `keras.callbacks.ModelCheckpoint, `'
+                                      ' it can\'t save only generator model.'
+                                      ' Please consider using the`ganutil.callbacks.GanModelCheckpoint'
+                                      ' class.'))
+
     g_callbacks = cbks.CallbackList(g_callbacks)
     g_callbacks.set_model(gan)
     g_callbacks.set_params({
@@ -199,8 +237,10 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
             n = len(samples[0])
 
             # train discriminator
-            x = np.concatenate((samples[0], _generate(generator, g(len(samples[0])))))
-            y = np.concatenate((samples[1], np.zeros(len(samples[0])))).astype(np.int64)
+            x = np.concatenate(
+                (samples[0], _generate(generator, g(len(samples[0])))))
+            y = np.concatenate(
+                (samples[1], np.zeros(len(samples[0])))).astype(np.int64)
             d_batch_logs = {'batch': step, 'size': x.shape[0]}
             d_callbacks.on_batch_begin(step, d_batch_logs)
             d_outs = discriminator.train_on_batch(x, y)
