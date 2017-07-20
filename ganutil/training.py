@@ -55,7 +55,7 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
 
         discriminator.history = cbks.History()
         d_callbacks = (d_callbacks or []) + [discriminator.history]
-        d_callbacks += [cbks.BaseLogger('discriminator'),
+        d_callbacks += [cbks.BaseLogger(),
                         cbks.ProgbarLogger(count_mode='steps')]
         d_callbacks = cbks.CallbackList(d_callbacks)
         d_callbacks.set_model(discriminator)
@@ -69,7 +69,7 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
 
         gan.history = cbks.History()
         g_callbacks = (d_callbacks or []) + [gan.history]
-        g_callbacks += [cbks.BaseLogger('generator'),
+        g_callbacks += [cbks.BaseLogger(),
                         cbks.ProgbarLogger(count_mode='steps')]
         g_callbacks = cbks.CallbackList(g_callbacks)
         g_callbacks.set_model(gan)
@@ -154,7 +154,7 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
 
     discriminator.history = cbks.History()
     d_callbacks = (d_callbacks or []) + [discriminator.history]
-    d_callbacks += [cbks.BaseLogger('discriminator'),
+    d_callbacks += [cbks.BaseLogger(),
                     cbks.ProgbarLogger(count_mode='steps')]
     d_callbacks = cbks.CallbackList(d_callbacks)
     d_callbacks.set_model(discriminator)
@@ -169,7 +169,7 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
 
     gan.history = cbks.History()
     g_callbacks = (d_callbacks or []) + [gan.history]
-    g_callbacks += [cbks.BaseLogger('generator'),
+    g_callbacks += [cbks.BaseLogger(),
                     cbks.ProgbarLogger(count_mode='steps')]
     g_callbacks = cbks.CallbackList(g_callbacks)
     g_callbacks.set_model(gan)
