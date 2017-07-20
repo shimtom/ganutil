@@ -8,6 +8,15 @@ from numpy import array_equal
 
 
 def compile(discriminator, generator, dparameter, gparameter):
+    """Ganの学習のために, Discriminatorモデルと[Generator + Discriminator]モデルをコンパイルする.
+
+    :param keras.Model discriminator: Discriminatorモデル.
+    :param keras.Model generator: Generatorモデル.
+    :param dict dparameter: Discriminatorモデルのコンパイルに使用する引数.
+    :param dict gparameter: [Generator + Discriminator]モデルのコンパイルに使用する引数.
+
+    :return: コンパイル済みの[Generator + Discriminator]モデル,Discriminatorモデル,Generatorモデル.
+    """
     discriminator.compile(**dparameter)
     set_trainability(discriminator, False)
     gan = Sequential((generator, discriminator))
