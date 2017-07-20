@@ -199,10 +199,10 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
             n = len(samples[0])
 
             # train discriminator
-            d_batch_logs = {'batch': step, 'size': n}
+            x = np.concatenate((samples[0], _generate(generator, g(len(samples[0])))))
+            y = np.concatenate((samples[1], np.zeros(len(samples[0])))).astype(np.int64)
+            d_batch_logs = {'batch': step, 'size': x.shape[0]}
             d_callbacks.on_batch_begin(step, d_batch_logs)
-            x = np.concatenate((samples[0], _generate(generator, g(n))))
-            y = np.concatenate((samples[1], np.zeros(n))).astype(np.int64)
             d_outs = discriminator.train_on_batch(x, y)
             if not isinstance(d_outs, list):
                 d_outs = [d_outs]
@@ -211,10 +211,10 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
             d_callbacks.on_batch_end(step, d_batch_logs)
 
             # train generator
-            g_batch_logs = {'batch': step, 'size': n}
-            g_callbacks.on_batch_begin(step, g_batch_logs)
             x = g(n)
             y = np.ones(n, dtype=np.int64)
+            g_batch_logs = {'batch': step, 'size': x.shape[0]}
+            g_callbacks.on_batch_begin(step, g_batch_logs)
             g_outs = gan.train_on_batch(x, y)
             if not isinstance(g_outs, list):
                 g_outs = [g_outs]
