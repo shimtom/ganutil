@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import copy
-import time
 import warnings
 from math import ceil
 
@@ -16,7 +14,12 @@ default_preprocessor = ImageDataGenerator()
 default_saver = Saver('save')
 
 
-def fit_generator(gan, discriminator, generator, d_generator, g_generator, steps_per_epoch, d_iteration_per_step=1, g_iteration_per_step=1, epochs=1, max_queue_size=10, workers=1, use_multiprocessing=False, shuffle=True, initial_epoch=0):
+def fit_generator(gan, discriminator, generator, d_generator, g_generator,
+                  steps_per_epoch, d_iteration_per_step=1, g_iteration_per_step=1,
+                  epochs=1, d_callbacks=None, g_callbacks=None,
+                  max_queue_size=10, workers=1, use_multiprocessing=False,
+                  shuffle=True, initial_epoch=0):
+
     d_is_sequence = isinstance(d_generator, Sequence)
     g_is_sequence = isinstance(g_generator, Sequence)
 
@@ -26,60 +29,98 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator, steps
                         ' and multiple workers may duplicate your data.'
                         ' Please consider using the`keras.utils.Sequence'
                         ' class.'))
-
     d_enqueuer = None
     g_enqueuer = None
 
     wait_time = 0.01  # in seconds
 
-    # TODO: add callbacks.gan_on_train_begin()
-    # TODO: add callbacks.discriminator_on_train_begin()
-    # TODO: add callbacks.generator_on_train_begin()
-
     try:
         if d_is_sequence:
-            d_enqueuer = OrderedEnqueuer(d_generator,
-                                         use_multiprocessing=use_multiprocessing,
-                                         shuffle=shuffle)
+            d_enqueuer = OrderedEnqueuer(
+                d_generator, use_multiprocessing=use_multiprocessing, shuffle=shuffle)
         else:
-            d_enqueuer = GeneratorEnqueuer(d_generator,
-                                           use_multiprocessing=use_multiprocessing,
-                                           wait_time=wait_time)
+            d_enqueuer = GeneratorEnqueuer(
+                d_generator, use_multiprocessing=use_multiprocessing, wait_time=wait_time)
         d_enqueuer.start(workers=workers, max_queue_size=max_queue_size)
         d_sample_generator = d_enqueuer.get()
 
         if g_is_sequence:
-            g_enqueuer = OrderedEnqueuer(g_generator,
-                                         use_multiprocessing=use_multiprocessing,
-                                         shuffle=shuffle)
+            g_enqueuer = OrderedEnqueuer(
+                g_generator, use_multiprocessing=use_multiprocessing, shuffle=shuffle)
         else:
-            g_enqueuer = GeneratorEnqueuer(g_generator,
-                                           use_multiprocessing=use_multiprocessing,
-                                           wait_time=wait_time)
+            g_enqueuer = GeneratorEnqueuer(
+                g_generator, use_multiprocessing=use_multiprocessing, wait_time=wait_time)
         g_enqueuer.start(workers=workers, max_queue_size=max_queue_size)
         g_output_generator = g_enqueuer.get()
 
-        for epoch in range(initial_epoch, epochs):
-            # TODO: add callbacks.gan_on_epoch_begin()
-            # TODO: add callbacks.discriminator_on_epoch_begin()
-            # TODO: add callbacks.generator_on_epoch_begin()
-            for step in range(steps_per_epoch):
-                # TODO: add callbacks.gan_on_batch_begin()
-                for index in range(d_iteration_per_step):
-                    # TODO: add callbacks.discriminator_on_batch_begin()
-                    samples = next(d_sample_generator)
-                    discriminator.train_on_batch(*samples)
-                    # TODO: add callbacks.discriminator_on_batch_end()
+        discriminator.history = cbks.History()
+        d_callbacks = (d_callbacks or []) + [discriminator.history]
+        d_callbacks += [cbks.BaseLogger('discriminator'),
+                        cbks.ProgbarLogger(count_mode='steps')]
+        d_callbacks = cbks.CallbackList(d_callbacks)
+        d_callbacks.set_model(discriminator)
+        d_callbacks.set_params({
+            'epochs': epochs,
+            'steps': steps_per_epoch,
+            'verbose': 1,
+            'do_validation': False,
+            'metrics': discriminator.metrics_names,
+        })
 
+        gan.history = cbks.History()
+        g_callbacks = (d_callbacks or []) + [gan.history]
+        g_callbacks += [cbks.BaseLogger('generator'),
+                        cbks.ProgbarLogger(count_mode='steps')]
+        g_callbacks = cbks.CallbackList(g_callbacks)
+        g_callbacks.set_model(gan)
+        g_callbacks.set_params({
+            'epochs': epochs,
+            'steps': steps_per_epoch,
+            'verbose': 1,
+            'do_validation': False,
+            'metrics': gan.metrics_names,
+        })
+
+        d_callbacks.on_train_begin()
+        g_callbacks.on_train_begin()
+
+        for epoch in range(initial_epoch, epochs):
+            d_callbacks.on_epoch_begin(epoch)
+            g_callbacks.on_epoch_begin(epoch)
+            for step in range(steps_per_epoch):
+                d_batch_logs = {}
+                for index in range(d_iteration_per_step):
+                    samples = next(d_sample_generator)
+                    d_batch_logs['batch'] = step
+                    d_batch_logs['iteration'] = index
+                    d_batch_logs['size'] = len(samples[0].shape[0])
+                    d_callbacks.on_batch_begin(step, d_batch_logs)
+                    d_outs = discriminator.train_on_batch(*samples)
+                    if not isinstance(d_outs, list):
+                        d_outs = [d_outs]
+                    for n, o in zip(discriminator.metrics_names, d_outs):
+                        d_batch_logs[n] = o
+                    d_callbacks.on_batch_end(step)
+
+                g_batch_logs = {}
                 for index in range(g_iteration_per_step):
-                    # TODO: add callbacks.generator_on_batch_begin()
                     samples = next(g_output_generator)
-                    gan.train_on_batch(*samples)
-                    # TODO: add callbacks.generator_on_batch_end()
-                # TODO: add callbacks.gan_on_batch_end()
-            # TODO: add callbacks.gan_on_epoch_end()
-            # TODO: add callbacks.discriminator_on_epoch_end()
-            # TODO: add callbacks.generator_on_epoch_end()
+                    g_batch_logs['batch'] = step
+                    g_batch_logs['iteration'] = index
+                    g_batch_logs['size'] = len(samples[0].shape[0])
+                    g_callbacks.on_batch_begin(step, g_batch_logs)
+                    g_outs = gan.train_on_batch(*samples)
+                    if not isinstance(g_outs, list):
+                        g_outs = [g_outs]
+                    for n, o in zip(gan.metrics_names, d_outs):
+                        g_batch_logs[n] = o
+                    g_callbacks.on_batch_end(step)
+
+                d_callbacks.on_epoch_end(epoch)
+                g_callbacks.on_epoch_end(epoch)
+
+            d_callbacks.on_train_end()
+            g_callbacks.on_train_end()
 
     finally:
         if d_enqueuer is not None:
@@ -87,13 +128,10 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator, steps
         if g_enqueuer is not None:
             g_enqueuer.stop()
 
-    # TODO: add callbacks.gan_on_train_end()
-    # TODO: add callbacks.discriminator_on_train_end()
-    # TODO: add callbacks.generator_on_train_end()
+    return discriminator.history, generator.history
 
 
-def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_size=32,
-          preprocessor=default_preprocessor, saver=default_saver):
+def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_size=32, d_callbacks=None, g_callbacks=None, preprocessor=default_preprocessor):
     """GANを訓練する.
     また,エポックごとに学習結果を保存する.それぞれの損失,精度のグラフ,モデル,パラメータ,生成画像が保存される.保存にはgan.saverを使用する.
     :param keras.Model gan: compile済みgenerator + discriminatorモデル.
@@ -112,22 +150,13 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
     :param Saver saver: 各値を保存するセーバー.
         デフォルトは`save`ディレクトリに各値を保存する.
     """
-    saver.architecture(discriminator, generator)
-
-    data_size = len(d_inputs)
     step_size = int(ceil(len(d_inputs) / batch_size))
 
-    g_total = dict()
-    d_total = dict()
-
-    start = time.time()
-
-    d_out_labels = copy.copy(_get_deduped_metrics_names(discriminator))
-    d_history = cbks.History()
-    d_callbacks = [cbks.BaseLogger()] + (callbacks or []) + \
-        [d_history] + [cbks.ProgbarLogger()]
+    discriminator.history = cbks.History()
+    d_callbacks = (d_callbacks or []) + [discriminator.history]
+    d_callbacks += [cbks.BaseLogger('discriminator'),
+                    cbks.ProgbarLogger(count_mode='steps')]
     d_callbacks = cbks.CallbackList(d_callbacks)
-    d_out_labels = d_out_labels or []
     d_callbacks.set_model(discriminator)
     d_callbacks.set_params({
         'batch_size': batch_size,
@@ -135,23 +164,30 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
         'samples': batch_size,
         'verbose': 1,
         'do_validation': False,
-        'metrics': d_out_labels or [],
+        'metrics': discriminator.metrics_names,
     })
 
-    g_history = cbks.History()
-    g_out_labels = copy.copy(_get_deduped_metrics_names(gan))
+    gan.history = cbks.History()
+    g_callbacks = (d_callbacks or []) + [gan.history]
+    g_callbacks += [cbks.BaseLogger('generator'),
+                    cbks.ProgbarLogger(count_mode='steps')]
+    g_callbacks = cbks.CallbackList(g_callbacks)
+    g_callbacks.set_model(gan)
+    g_callbacks.set_params({
+        'batch_size': batch_size,
+        'epochs': epoch_size,
+        'samples': batch_size,
+        'verbose': 1,
+        'do_validation': False,
+        'metrics': gan.metrics_names,
+    })
 
-    # TODO gan_on_train_begion
-    # TODO discriminator_on_train_begion
-    # TODO generator_on_train_begion
     d_callbacks.on_train_begin()
+    g_callbacks.on_train_begin()
 
     for epoch in range(epoch_size):
-        # TODO gan_on_epoch_begion
-        # TODO discriminator_on_epoch_begin
-        # TODO generator_on_epoch_begion
         d_callbacks.on_epoch_begin(epoch)
-        start_epoch = time.time()
+        g_callbacks.on_epoch_begin(epoch)
         d = preprocessor.flow(d_inputs, np.ones(
             len(d_inputs), dtype=np.int64), batch_size=batch_size)
         g = _set_input_generator(g_inputs)
@@ -162,72 +198,37 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
             # real batch size
             n = len(samples[0])
 
-            # FIXME add gan_on_batch_begin()
-            batch_logs = {}
-            batch_logs['batch'] = step
-            batch_logs['size'] = len(samples[0])
-            callbacks.on_batch_begin(step, batch_logs)
-
-            start_step = time.time()
-
             # train discriminator
-            # TODO add discriminator_on_batch_begin()
+            d_batch_logs = {'batch': step, 'size': n}
+            d_callbacks.on_batch_begin(step, d_batch_logs)
             x = np.concatenate((samples[0], _generate(generator, g(n))))
             y = np.concatenate((samples[1], np.zeros(n))).astype(np.int64)
-            d_scalars = discriminator.train_on_batch(x, y)
-            if len(discriminator.metrics_names) == 1:
-                d_scalars = [d_scalars]
-            d_result = dict()
-            for s, n in zip(d_scalars, discriminator.metrics_names):
-                d_result[n] = s
-            # TODO add discriminator_on_batch_end()
+            d_outs = discriminator.train_on_batch(x, y)
+            if not isinstance(d_outs, list):
+                d_outs = [d_outs]
+            for n, o in zip(discriminator.metrics_names, d_outs):
+                d_batch_logs[n] = o
+            d_callbacks.on_batch_end(step, d_batch_logs)
 
             # train generator
-            # TODO add generator_on_batch_begion()
+            g_batch_logs = {'batch': step, 'size': n}
+            g_callbacks.on_batch_begin(step, g_batch_logs)
             x = g(n)
             y = np.ones(n, dtype=np.int64)
-            g_scalars = gan.train_on_batch(x, y)
-            if len(gan.metrics_names) == 1:
-                g_scalars = [d_scalars]
-            g_result = dict()
-            for s, n in zip(g_scalars, gan.metrics_names):
-                g_result[n] = s
-            # TODO add generator_on_batch_end()
+            g_outs = gan.train_on_batch(x, y)
+            if not isinstance(g_outs, list):
+                g_outs = [g_outs]
+            for n, o in zip(gan.metrics_names, g_outs):
+                g_batch_logs[n] = o
+            g_callbacks.on_batch_end(step, g_batch_logs)
 
-            # TODO add gan_on_batch_end()
-            # print result per step
-            print('time %.3fs epoch %d / %d [%d] d: %s g: %s' % (
-                  time.time() - start_step, epoch, epoch_size, str(d_result), str(g_result)))
+        d_callbacks.on_epoch_end(epoch)
+        g_callbacks.on_epoch_end(epoch)
 
-            # compute sum
-            for k, v in d_result.items():
-                g_result[k] = g_result.get(k, 0.) + v * n
-            for k, v in g_result.items():
-                g_result[k] = g_result.get(k, 0.) + v * n
-        # TODO add discriminator_on_epoch_end
-        # TODO add generator_on_epoch_end
-        # TODO add gan_on_epoch_end
-        # compute total average
-        for k, v in g_result.items():
-            d_total.setdefault(k, []).append(g_result.get(k, 0.) / data_size)
-        for k, v in g_total.items():
-            g_total.setdefault(k, []).append(g_result.get(k, 0.) / data_size)
+    d_callbacks.on_train_end()
+    g_callbacks.on_train_end()
 
-        # print result
-        print('time %.3fs epoch %d / %d d: %s g: %s' %
-              (time.time() - start_epoch, epoch, epoch_size, d_total, g_total))
-
-        # save
-        saver.model(discriminator, generator)
-        saver.parameter(discriminator, generator)
-        saver.scalars(d_total, g_total)
-        saver.image(_generate(generator, g(25)), id=epoch)
-
-    # TODO add discriminator_on_train_end
-    # TODO add generator_on_train_end
-    # TODO add gan_on_train_end
-    print('time %.3fs' % (time.time() - start))
-    return d_history, g_history
+    return discriminator.history, gan.history
 
 
 def _set_input_generator(data):
@@ -253,18 +254,3 @@ def _generate(generator, inputs, to_image=False):
         generated = generated * 127.5 + 127.5
         generated = generated.astype(np.uint8)
     return generated
-
-
-def _get_deduped_metrics_names(model):
-    out_labels = model.metrics_names
-
-    # Rename duplicated metrics name
-    # (can happen with an output layer shared among multiple dataflows).
-    deduped_out_labels = []
-    for i, label in enumerate(out_labels):
-        new_label = label
-        if out_labels.count(label) > 1:
-            dup_idx = out_labels[:i].count(label)
-            new_label += '_' + str(dup_idx + 1)
-        deduped_out_labels.append(new_label)
-    return deduped_out_labels
