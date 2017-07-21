@@ -7,11 +7,12 @@ setup(name='ganutil',
       description='Generative Adversarial Nets utility.',
       author='shimtom',
       author_email='ii00zero1230@gmail.com',
-      packages=find_packages(),
-      install_requires=['numpy', 'pillow', 'keras',
+      packages=find_packages(exclude=('test')),
+      install_requires=['numpy', 'pillow', 'keras >= 2.0.6',
                         'matplotlib', 'seaborn', 'h5py'],
       entry_points={
           'console_scripts': [
               'ganutil = ganutil.ganutil:main',
           ],
-      })
+      },
+      test_suite='test')
