@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from json import load as json_load
+from os import isdir, isfile
 from sys import exit, stderr
 
 from keras.models import Sequential, load_model, model_from_config
