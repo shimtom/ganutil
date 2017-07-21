@@ -24,7 +24,7 @@ def compile(discriminator, generator, dparameter, gparameter):
     return gan, discriminator, generator
 
 
-def save_architecture(self, dfilepath, gfilepath, discriminator, generator, mode='yaml'):
+def save_architecture(dfilepath, gfilepath, discriminator, generator, mode='yaml'):
     if mode == 'yaml':
         yaml_mode = True
     elif mode == 'json':
@@ -44,7 +44,7 @@ def save_architecture(self, dfilepath, gfilepath, discriminator, generator, mode
             f.write(generator.to_json(indent=4))
 
 
-def save_dict(self, filepath, dictionary):
+def save_dict(filepath, dictionary):
     extension = filepath.split('.')[-1]
     if extension == 'yml':
         yaml_mode = True
