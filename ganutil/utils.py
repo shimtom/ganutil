@@ -24,24 +24,29 @@ def compile(discriminator, generator, dparameter, gparameter):
     return gan, discriminator, generator
 
 
-def save_architecture(dfilepath, gfilepath, discriminator, generator, mode='yaml'):
-    if mode == 'yaml':
-        yaml_mode = True
-    elif mode == 'json':
-        yaml_mode = False
-    else:
-        raise ValueError('Unknown `mode`: ' + str(mode))
+def save_architecture(dfilepath, gfilepath, discriminator, generator):
+    for p in [dfilepath, gfilepath]:
+        extension = p.split('.')[-1]
+        if extension not in ['yml', 'json']:
+            raise ValueError('Unknown file extension: ' + str(p))
 
     with open(dfilepath, 'w') as f:
-        if yaml_mode:
+        extension = dfilepath.split('.')[-1]
+        if extension == 'yml':
             f.write(discriminator.to_yaml(indent=4))
-        else:
+        elif extension == 'json':
             f.write(discriminator.to_json(indent=4))
-    with open(gfilepath, 'w') as f:
-        if yaml_mode:
-            f.write(generator.to_yaml(indent=4))
         else:
+            raise ValueError('Unknown `dfilepath` extension: ' + str(extension))
+
+    with open(gfilepath, 'w') as f:
+        extension = gfilepath.split('.')[-1]
+        if extension == 'yml':
+            f.write(generator.to_yaml(indent=4))
+        elif extension == 'json':
             f.write(generator.to_json(indent=4))
+        else:
+            raise ValueError('Unknown `gfilepath` extension: ' + str(extension))
 
 
 def save_dict(filepath, dictionary):
