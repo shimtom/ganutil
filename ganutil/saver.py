@@ -5,8 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-
-from .ensure_existing import ensure_directory
+import os
 
 matplotlib.use('Agg')
 
@@ -194,3 +193,7 @@ class _Saver:
         plt.title(self._name)
         plt.savefig(join(self._accuracy_dir, '%s.png' % self._name))
         plt.close()
+
+def ensure_directory(path):
+    if not os.path.isdir(path):
+        os.makedirs(path)
