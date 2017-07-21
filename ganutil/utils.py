@@ -1,6 +1,3 @@
-import json
-
-import yaml
 from keras.models import Sequential
 
 
@@ -31,21 +28,6 @@ def save_architecture(dfilepath, gfilepath, discriminator, generator):
                 f.write(m.to_json(indent=4))
             else:
                 raise ValueError('Unknown file extension: ' + str(extension))
-
-
-def save_dict(filepath, dictionary):
-    extension = filepath.split('.')[-1]
-    if extension == 'yml':
-        yaml_mode = True
-    elif extension == 'json':
-        yaml_mode = False
-    else:
-        raise ValueError('Unknown file extension: ' + str(extension))
-    with open(filepath, 'w') as f:
-        if yaml_mode:
-            f.write(yaml.dump(filepath, indent=4))
-        else:
-            f.write(json.dump(filepath, indent=4))
 
 
 def set_trainability(model, trainable=False):
