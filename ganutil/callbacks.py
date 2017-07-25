@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import math
 import os
+
+import keras.callbacks as cbks
 import matplotlib
 
 matplotlib.use('Agg')
 
-import keras.callbacks as cbks
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -176,8 +177,7 @@ class ProgbarLogger(cbks.ProgbarLogger):
             else:
                 target = self.params['samples']
             self.target = target
-            self.progbar = Progbar(target=self.target,
-                                   verbose=self.verbose)
+            self.progbar = Progbar(target=self.target, verbose=self.verbose)
         self.seen = 0
 
 
