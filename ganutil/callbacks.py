@@ -52,7 +52,7 @@ class ValueGraph(cbks.Callback):
 
         if sample_mode == 'epoch':
             self.epoch_mode = True
-        elif sample_mode == 'step':
+        elif sample_mode == 'batch':
             self.epoch_mode = False
         else:
             raise ValueError('Unknown `sample_mode`: ' + str(sample_mode))
@@ -118,7 +118,7 @@ class ValueHistory(cbks.Callback):
 
         if sample_mode == 'epoch':
             self.epoch_mode = True
-        elif sample_mode == 'step':
+        elif sample_mode == 'batch':
             self.epoch_mode = False
         else:
             raise ValueError('Unknown `sample_mode`: ' + str(sample_mode))
