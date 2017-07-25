@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from json import load as json_load
+from os import isdir, isfile
 from sys import exit, stderr
 
 from keras.models import Sequential, load_model, model_from_config
@@ -8,8 +9,6 @@ from numpy import array_equal, load
 from yaml import load as yaml_load
 
 from .discrimination import discriminate as gan_discriminate
-from .ensure_existing import (ensure_directory, ensure_file, ensure_files,
-                              ensure_input_shape)
 from .generation import generate as gan_generate
 from .saver import Saver
 from .training import train as train_gan
@@ -33,16 +32,16 @@ def train(args):
     batch_size = args.batch
 
     # 引数で指定されたパスが存在することを確かめる
-    if not (ensure_files([discriminator_path, generator_path], extensions=['json', 'yml']) and
-            ensure_files([discriminator_input_path, generator_input_path], extensions=['npy']) and
-            ensure_directory(save_path)):
+    if not (_check_files([discriminator_path, generator_path], extensions=['json', 'yml']) and
+            _check_files([discriminator_input_path, generator_input_path], extensions=['npy']) and
+            _check_directory(save_path)):
         exit(1)
 
     # discriminatorモデルと入力データを読み込み、形状が正しいかを確かめる.
     discriminator = _load_model_architecture_and_weight(
         discriminator_path, discriminator_weight_path)
     discriminator_inputs = load(discriminator_input_path)
-    if not ensure_input_shape(discriminator.inputs[0].shape[1:], discriminator_inputs.shape[1:], 'discriminator'):
+    if not _check_input_shape(discriminator.inputs[0].shape[1:], discriminator_inputs.shape[1:], 'discriminator'):
         exit(1)
     # discriminatorの出力層の形状を確かめる.
     discriminator_output_shape = discriminator.outputs[-1].shape[1:]
@@ -55,7 +54,7 @@ def train(args):
     generator = _load_model_architecture_and_weight(
         generator_path, generator_weight_path)
     generator_inputs = load(generator_input_path)
-    if not ensure_input_shape(generator.inputs[0].shape[1:], generator_inputs.shape[1:], 'generator'):
+    if not _check_input_shape(generator.inputs[0].shape[1:], generator_inputs.shape[1:], 'generator'):
         exit(1)
     # generatorの出力層の形状を確かめる
     generator_output_shape = generator.outputs[-1].shape[1:]
@@ -124,17 +123,17 @@ def generate(args):
     save_path = args.save
     batch_size = args.batch
 
-    if not ensure_file(generator_path, extensions=['h5']):
+    if not _check_file(generator_path, extensions=['h5']):
         exit(1)
-    if not ensure_file(dataset_path, extensions=['npy']):
+    if not _check_file(dataset_path, extensions=['npy']):
         exit(1)
-    if not ensure_directory(save_path):
+    if not _check_directory(save_path):
         exit(1)
 
     generator = load_model(generator_path)
     dataset = load(dataset_path)
 
-    if not ensure_input_shape(generator.inputs[0].shape[1:], dataset.shape[1:], 'generator'):
+    if not _check_input_shape(generator.inputs[0].shape[1:], dataset.shape[1:], 'generator'):
         exit(1)
 
     gan_generate(generator, dataset, save_path, batch_size=batch_size)
@@ -146,16 +145,16 @@ def discriminate(args):
     save_path = args.save
     batch_size = args.batch
 
-    if not ensure_file(discriminator_path, extensions=['h5']):
+    if not _check_file(discriminator_path, extensions=['h5']):
         exit(1)
-    if not ensure_file(dataset_path, extensions=['npy']):
+    if not _check_file(dataset_path, extensions=['npy']):
         exit(1)
-    if not ensure_directory(save_path):
+    if not _check_directory(save_path):
         exit(1)
 
     discriminator = load_model(discriminator_path)
     dataset = load(dataset_path)
-    if not ensure_input_shape(discriminator.inputs[0].shape[1:], dataset.shape[1:], 'discriminator'):
+    if not _check_input_shape(discriminator.inputs[0].shape[1:], dataset.shape[1:], 'discriminator'):
         exit(1)
 
     gan_discriminate(discriminator, dataset, save_path, batch_size=batch_size)
@@ -171,7 +170,7 @@ def _load_model_architecture_and_weight(architecture_path, weight_path):
     """
     model = _load_model_architecture(architecture_path)
     if weight_path is not None:
-        if not ensure_file(weight_path, extensions=['h5']):
+        if not _check_file(weight_path, extensions=['h5']):
             exit(1)
         model.load_weights(weight_path)
 
@@ -199,3 +198,62 @@ def _load_model_architecture(path):
     model = model_from_config(architecture)
 
     return model
+
+
+def _check_file(path, extensions=[]):
+    """ファイルの存在を確認する.
+    結果は標準エラーに出力される.
+
+    :param str paths: ファイルのパス.
+    :param str extensions: ファイルが持つべき拡張子を指定する.
+    :return bool: ファイルが確認できた場合のみTrue.それ以外はFalse.
+    """
+    if not isfile(path):
+        print('%s is not valid.' % path, file=stderr)
+        return False
+    if len(extensions) > 0 and path.split('.')[-1] not in extensions:
+        print('%s is not supported' % path)
+        return False
+    return True
+
+
+def _check_files(paths, extensions=[]):
+    """ファイルの存在を確認する.
+    結果は標準エラーに出力される.
+
+    :param list of str paths: ファイルのパスのリスト.
+    :param list of str extensions: 全てのファイルが持つべき拡張子を指定する.
+    :return bool: 全てのファイルが確認できた場合のみTrue.それ以外はFalse.
+    """
+    result = True
+    for path in paths:
+        result = result and _check_file(path, extensions=extensions)
+    return result
+
+
+def _check_directory(path):
+    """ディレクトリの存在を確認し、標準エラーに結果を表示する.
+
+    :param str path: ディレクトリのパス.
+    :return bool: ディレクトリが確認できたらTrue.そうでなければFalse.
+    """
+    if not isdir(path):
+        print('%s is not valid.' % path, file=stderr)
+        return False
+    return True
+
+
+def _check_input_shape(input_shape, data_shape, name):
+    """モデルの入力層の形状とデータの形状が等しいことを確かめる.
+    結果は標準エラーに出力される.
+
+    :param input_shape: モデルの入力層の形状.
+    :param data_shape: データの形状.
+    :param name: モデル名.
+    :return: モデルの入力層の形状とデータの形状が等しいかどうか.
+    """
+    if not array_equal(input_shape, data_shape):
+        print('input data shape %s does not equal to %s input layer shape %s' %
+              (str(data_shape), name, str(input_shape)), file=stderr)
+        return False
+    return True
