@@ -11,8 +11,6 @@ import numpy as np
 import seaborn as sns
 from keras.utils import Progbar
 
-from .ensure_existing import ensure_directory
-
 
 class GeneratedImage(cbks.Callback):
     def __init__(self, filepath, samples, normalize):
@@ -23,7 +21,8 @@ class GeneratedImage(cbks.Callback):
 
     def on_epoch_end(self, epoch, logs={}):
         filepath = self.filepath.format(epoch=epoch, **logs)
-        ensure_directory(filepath)
+        if not os.path.isdir(os.path.dirname(filepath)):
+            os.mkdir(os.path.dirname(filepath))
 
         generator = self.model.layers[0]
         images = self.normalize(generator.predict_on_batch(self.samples))
@@ -71,7 +70,8 @@ class ValueGraph(cbks.Callback):
         if not self.epoch_mode:
             filepath = self.filepath.format(
                 batch=batch, name=self.name, **logs)
-            ensure_directory('/'.join(filepath.split('/')[:-1]))
+            if not os.path.isdir(os.path.dirname(filepath)):
+                os.mkdir(os.path.dirname(filepath))
             self._plot(filepath, self.values)
 
     def on_epoch_end(self, epoch, logs={}):
@@ -82,7 +82,8 @@ class ValueGraph(cbks.Callback):
         if self.epoch_mode:
             filepath = self.filepath.format(
                 epoch=epoch, name=self.name, **logs)
-            ensure_directory('/'.join(filepath.split('/')[:-1]))
+            if not os.path.isdir(os.path.dirname(filepath)):
+                os.mkdir(os.path.dirname(filepath))
             self._plot(filepath, self.epoch_values)
 
     def _plot(filepath, values):
@@ -135,7 +136,8 @@ class ValueHistory(cbks.Callback):
         if not self.epoch_mode:
             filepath = self.filepath.format(
                 batch=batch, name=self.name, **logs)
-            ensure_directory('/'.join(filepath.split('/')[:-1]))
+            if not os.path.isdir(os.path.dirname(filepath)):
+                os.mkdir(os.path.dirname(filepath))
             np.save(filepath, np.array(self.values))
 
     def on_epoch_end(self, epoch, logs={}):
@@ -146,7 +148,8 @@ class ValueHistory(cbks.Callback):
         if self.epoch_mode:
             filepath = self.filepath.format(
                 epoch=epoch, name=self.name, **logs)
-            ensure_directory('/'.join(filepath.split('/')[:-1]))
+            if not os.path.isdir(os.path.dirname(filepath)):
+                os.mkdir(os.path.dirname(filepath))
             np.save(filepath, np.array(self.epoch_values))
 
 
