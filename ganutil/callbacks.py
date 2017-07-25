@@ -1,11 +1,17 @@
-import keras.callbacks as cbks
-from .ensure_existing import ensure_directory
-import os
 import math
-import numpy as np
+import os
+import matplotlib
+
+matplotlib.use('Agg')
+
+import keras.callbacks as cbks
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 from keras.utils import Progbar
+
+from .ensure_existing import ensure_directory
+
 
 def default_normalize(images):
     return np.array(images * 127.5 + 127.5).astype(np.uint8)
@@ -17,7 +23,6 @@ class GeneratedImage(cbks.Callback):
 
         self.savedir = savedir
         self.normalize = normalize
-
 
     def on_epoch_end(self, epoch, logs={}):
         savedir = os.path.join(self.savedir, str(epoch))
@@ -40,6 +45,7 @@ class GeneratedImage(cbks.Callback):
         plt.savefig(os.path.join(savedir, 'images.png'))
         plt.close()
 
+
 class ValueGraph(cbks.Callback):
     def __init__(self, filepath, name, sample_mode='epoch'):
         super(ValueGraph, self).__init__()
@@ -52,7 +58,6 @@ class ValueGraph(cbks.Callback):
             self.epoch_mode = False
         else:
             raise ValueError('Unknown `sample_mode`: ' + str(sample_mode))
-
 
     def on_train_begin(self, logs={}):
         self.values = []
@@ -69,10 +74,10 @@ class ValueGraph(cbks.Callback):
         self.total_size += batch_size
 
         if not self.epoch_mode:
-            filepath = self.filepath.format(batch=batch, name=self.name, **logs)
+            filepath = self.filepath.format(
+                batch=batch, name=self.name, **logs)
             ensure_directory('/'.join(filepath.split('/')[:-1]))
             self._plot(filepath, self.values)
-
 
     def on_epoch_end(self, epoch, logs={}):
         self.epoch_values.append(self.total_value / self.total_size)
@@ -80,7 +85,8 @@ class ValueGraph(cbks.Callback):
         self.total_size = 0.
 
         if self.epoch_mode:
-            filepath = self.filepath.format(epoch=epoch, name=self.name, **logs)
+            filepath = self.filepath.format(
+                epoch=epoch, name=self.name, **logs)
             ensure_directory('/'.join(filepath.split('/')[:-1]))
             self._plot(filepath, self.epoch_values)
 
@@ -93,9 +99,11 @@ class ValueGraph(cbks.Callback):
         plt.savefig(filepath)
         plt.close()
 
+
 class LossGraph(ValueGraph):
     def __init__(self, filepath, sample_mode='epoch'):
         super(LossGraph, self).__init__(filepath, 'loss', sample_mode)
+
 
 class AccuracyGraph(ValueGraph):
     def __init__(self, filepath, sample_mode='epoch'):
@@ -130,10 +138,10 @@ class ValueHistory(cbks.Callback):
         self.total_size += batch_size
 
         if not self.epoch_mode:
-            filepath = self.filepath.format(batch=batch, name=self.name, **logs)
+            filepath = self.filepath.format(
+                batch=batch, name=self.name, **logs)
             ensure_directory('/'.join(filepath.split('/')[:-1]))
             np.save(filepath, np.array(self.values))
-
 
     def on_epoch_end(self, epoch, logs={}):
         self.epoch_values.append(self.total_value / self.total_size)
@@ -141,7 +149,8 @@ class ValueHistory(cbks.Callback):
         self.total_size = 0.
 
         if self.epoch_mode:
-            filepath = self.filepath.format(epoch=epoch, name=self.name, **logs)
+            filepath = self.filepath.format(
+                epoch=epoch, name=self.name, **logs)
             ensure_directory('/'.join(filepath.split('/')[:-1]))
             np.save(filepath, np.array(self.epoch_values))
 
@@ -150,14 +159,17 @@ class LossHistory(ValueHistory):
     def __init__(self, filepath, sample_mode='epoch'):
         super(LossHistory, self).__init__(filepath, 'loss', sample_mode)
 
+
 class AccuracyHistory(ValueHistory):
     def __init__(self, filepath, sample_mode='epoch'):
         super(AccuracyHistory, self).__init__(filepath, 'acc', sample_mode)
 
+
 class ProgbarLogger(cbks.ProgbarLogger):
     def __init__(self, name, count_mode='samples'):
-            super(ProgbarLogger, self).__init__(count_mode=count_mode)
-            self.name = name
+        super(ProgbarLogger, self).__init__(count_mode=count_mode)
+        self.name = name
+
     def on_epoch_begin(self, epoch, logs=None):
         if self.verbose:
             print('%s Epoch %d/%d' % (self.name, epoch + 1, self.epochs))
@@ -170,7 +182,9 @@ class ProgbarLogger(cbks.ProgbarLogger):
                                    verbose=self.verbose)
         self.seen = 0
 
+
 class GanModelCheckpoint(cbks.ModelCheckpoint):
     """only use as generator Callback"""
+
     def on_train_begin(self):
         self.model = self.model.layers[0]
