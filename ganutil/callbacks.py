@@ -18,6 +18,7 @@ class GeneratedImage(cbks.Callback):
         super(GeneratedImage, self).__init__()
 
         self.filepath = filepath
+        self.samples = samples
         self.normalize = normalize
 
     def on_epoch_end(self, epoch, logs={}):
@@ -27,6 +28,8 @@ class GeneratedImage(cbks.Callback):
 
         generator = self.model.layers[0]
         images = self.normalize(generator.predict_on_batch(self.samples))
+        if len(images.shape) == 4 and images.shape[-1] == 1:
+            images = images.reshape(images.shape[:-1])
 
         columns = int(math.sqrt(len(images)))
         rows = int(len(images) // columns)
