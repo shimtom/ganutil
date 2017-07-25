@@ -30,44 +30,6 @@ class TestCallbacks(TestCase):
                         break
             self.assertEqual(len(functions), 0)
 
-
-    def test_generated_image(self):
-        with tempfile.TemporaryDirectory() as dirpath:
-            filepath = os.path.join(dirpath, '{epoch:02d}/images.png')
-
-            generator = Sequential()
-            generator.add(Dense(16, input_shape=(32,)))
-            generator.add(Activation('tanh'))
-            generator.add(Reshape((4, 4, 1)))
-
-            discriminator = Sequential()
-            discriminator.add(Flatten(input_shape=(4, 4, 1)))
-            discriminator.add(Dense(1))
-            discriminator.add(Activation('sigmoid'))
-
-            gan = Sequential((generator, discriminator))
-            gan.compile(Adam(), 'binary_crossentropy')
-
-            samples = np.random.uniform(-1, -1, (25, 32))
-
-            def normalize(images):
-                return images * 127.5 + 127.5
-
-            callback = cbks.GeneratedImage(filepath, samples, normalize)
-
-            callback.set_model(gan)
-            callback.set_params({
-                'epochs': 10,
-                'steps': 1,
-                'verbose': 1,
-                'do_validation': False,
-                'metrics': ['loss'],
-            })
-
-            for i in range(10):
-                callback.on_epoch_end(i,logs={})
-                self.assertTrue(os.path.isfile(filepath.format(epoch=i)))
-
     def test_value_graph(self):
         epoch_logs = {'value': 10}
         batch_logs = {'size': 10, 'value': 1}
@@ -102,3 +64,50 @@ class TestCallbacks(TestCase):
                 callback.on_epoch_end(i, epoch_logs)
                 self.assertFalse(os.path.isfile(filepath.format(epoch=i, batch=-1)))
             callback.on_train_end()
+
+class TestGeneratedImage(TestCase):
+    """ganutil.callbacks.GeneratedImageをテストするクラス."""
+    def test_property(self):
+        with tempfile.TemporaryDirectory() as dirpath:
+            filepath = os.path.join(dirpath, '{epoch:02d}/images.png')
+
+            samples = np.random.uniform(-1, -1, (25, 32))
+
+            def normalize(images):
+                return images * 127.5 + 127.5
+
+            callback = cbks.GeneratedImage(filepath, samples, normalize)
+
+            self.assertEqual(callback.filepath, filepath)
+            self.assertTrue(np.array_equal(callback.samples, samples))
+            self.assertEqual(callback.normalize, normalize)
+
+    def test_callback(self):
+        with tempfile.TemporaryDirectory() as dirpath:
+            filepath = os.path.join(dirpath, '{epoch:02d}/images.png')
+
+            generator = Sequential()
+            generator.add(Dense(16, input_shape=(32,)))
+            generator.add(Activation('tanh'))
+            generator.add(Reshape((4, 4, 1)))
+
+            discriminator = Sequential()
+            discriminator.add(Flatten(input_shape=(4, 4, 1)))
+            discriminator.add(Dense(1))
+            discriminator.add(Activation('sigmoid'))
+
+            gan = Sequential((generator, discriminator))
+            gan.compile(Adam(), 'binary_crossentropy')
+
+            samples = np.random.uniform(-1, -1, (25, 32))
+
+            def normalize(images):
+                return images * 127.5 + 127.5
+
+            callback = cbks.GeneratedImage(filepath, samples, normalize)
+
+            callback.set_model(gan)
+
+            for i in range(10):
+                callback.on_epoch_end(i,logs={})
+                self.assertTrue(os.path.isfile(filepath.format(epoch=i)))
