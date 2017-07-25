@@ -19,20 +19,18 @@ def default_normalize(images):
 
 
 class GeneratedImage(cbks.Callback):
-    def __init__(self, savedir, samples, normalize):
+    def __init__(self, filepath, samples, normalize):
         super(GeneratedImage, self).__init__()
 
-        self.savedir = savedir
+        self.filepath = filepath
         self.normalize = normalize
 
     def on_epoch_end(self, epoch, logs={}):
-        savedir = os.path.join(self.savedir, str(epoch))
-        ensure_directory(savedir)
+        filepath = self.filepath.format(epoch=epoch, **logs)
+        ensure_directory(filepath)
 
         generator = self.model.layers[0]
         images = self.normalize(generator.predict_on_batch(self.samples))
-
-        np.save(os.path.join(savedir, 'images.npy'), images)
 
         columns = int(math.sqrt(len(images)))
         rows = int(len(images) // columns)
@@ -43,7 +41,7 @@ class GeneratedImage(cbks.Callback):
                 plt.imshow(image)
                 plt.axis('off')
         plt.tight_layout()
-        plt.savefig(os.path.join(savedir, 'images.png'))
+        plt.savefig(filepath)
         plt.close()
 
 
