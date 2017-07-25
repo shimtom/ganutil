@@ -1,3 +1,4 @@
+import inspect
 import os
 import tempfile
 from unittest import TestCase
@@ -7,7 +8,7 @@ import numpy as np
 from keras.layers import Activation, Dense, Flatten, Reshape
 from keras.models import Sequential
 from keras.optimizers import Adam
-import inspect
+
 
 class TestCallbacks(TestCase):
     def test_inheritance(self):
@@ -45,9 +46,11 @@ class TestCallbacks(TestCase):
                 for j in range(10):
                     callback.on_batch_begin(j, batch_logs)
                     callback.on_batch_end(j, batch_logs)
-                    self.assertFalse(os.path.isfile(filepath.format(epoch=i, batch=j)))
+                    self.assertFalse(os.path.isfile(
+                        filepath.format(epoch=i, batch=j)))
                 callback.on_epoch_end(i, epoch_logs)
-                self.assertTrue(os.path.isfile(filepath.format(epoch=i, batch=-1)))
+                self.assertTrue(os.path.isfile(
+                    filepath.format(epoch=i, batch=-1)))
             callback.on_train_end()
 
         with tempfile.TemporaryDirectory() as dirpath:
@@ -60,13 +63,17 @@ class TestCallbacks(TestCase):
                 for j in range(10):
                     callback.on_batch_begin(j, batch_logs)
                     callback.on_batch_end(j, batch_logs)
-                    self.assertTrue(os.path.isfile(filepath.format(epoch=i, batch=j)))
+                    self.assertTrue(os.path.isfile(
+                        filepath.format(epoch=i, batch=j)))
                 callback.on_epoch_end(i, epoch_logs)
-                self.assertFalse(os.path.isfile(filepath.format(epoch=i, batch=-1)))
+                self.assertFalse(os.path.isfile(
+                    filepath.format(epoch=i, batch=-1)))
             callback.on_train_end()
+
 
 class TestGeneratedImage(TestCase):
     """ganutil.callbacks.GeneratedImageをテストするクラス."""
+
     def test_property(self):
         with tempfile.TemporaryDirectory() as dirpath:
             filepath = os.path.join(dirpath, '{epoch:02d}/images.png')
@@ -109,8 +116,9 @@ class TestGeneratedImage(TestCase):
             callback.set_model(gan)
 
             for i in range(10):
-                callback.on_epoch_end(i,logs={})
+                callback.on_epoch_end(i, logs={})
                 self.assertTrue(os.path.isfile(filepath.format(epoch=i)))
+
 
 class TestValueGraph(TestCase):
     def test_callback(self):
@@ -128,9 +136,11 @@ class TestValueGraph(TestCase):
                 for j in range(10):
                     callback.on_batch_begin(j, batch_logs)
                     callback.on_batch_end(j, batch_logs)
-                    self.assertFalse(os.path.isfile(filepath.format(epoch=i, batch=j)))
+                    self.assertFalse(os.path.isfile(
+                        filepath.format(epoch=i, batch=j)))
                 callback.on_epoch_end(i, epoch_logs)
-                self.assertTrue(os.path.isfile(filepath.format(epoch=i, batch=-1)))
+                self.assertTrue(os.path.isfile(
+                    filepath.format(epoch=i, batch=-1)))
             callback.on_train_end()
 
         with tempfile.TemporaryDirectory() as dirpath:
@@ -143,7 +153,9 @@ class TestValueGraph(TestCase):
                 for j in range(10):
                     callback.on_batch_begin(j, batch_logs)
                     callback.on_batch_end(j, batch_logs)
-                    self.assertTrue(os.path.isfile(filepath.format(epoch=i, batch=j)))
+                    self.assertTrue(os.path.isfile(
+                        filepath.format(epoch=i, batch=j)))
                 callback.on_epoch_end(i, epoch_logs)
-                self.assertFalse(os.path.isfile(filepath.format(epoch=i, batch=-1)))
+                self.assertFalse(os.path.isfile(
+                    filepath.format(epoch=i, batch=-1)))
             callback.on_train_end()
