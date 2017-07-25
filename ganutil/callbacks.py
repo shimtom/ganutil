@@ -90,7 +90,7 @@ class ValueGraph(cbks.Callback):
                 os.mkdir(os.path.dirname(filepath))
             self._plot(filepath, self.epoch_values)
 
-    def _plot(filepath, values):
+    def _plot(self, filepath, values):
         sns.set(style='darkgrid', palette='deep', color_codes=True)
         plt.figure()
         plt.plot(values)
