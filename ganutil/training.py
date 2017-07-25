@@ -55,9 +55,10 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
         g_output_generator = g_enqueuer.get()
 
         discriminator.history = cbks.History()
-        d_callbacks = (d_callbacks or []) + [discriminator.history]
-        d_callbacks += [cbks.BaseLogger(),
-                        ProgbarLogger(count_mode='steps')]
+        # BaseLoggerは1番目でなければならない
+        d_callbacks = [cbks.BaseLogger()] + (d_callbacks or [])
+        d_callbacks += [discriminator.history]
+        d_callbacks += [ProgbarLogger(count_mode='steps')]
         for c in d_callbacks:
             if isinstance(c, cbks.ProgbarLogger):
                 warnings.warn(UserWarning('Using a `keras.callbacks.ProgbarLogger, `'
@@ -76,9 +77,9 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
         })
 
         gan.history = cbks.History()
-        g_callbacks = (g_callbacks or []) + [gan.history]
-        g_callbacks += [cbks.BaseLogger(),
-                        cbks.ProgbarLogger(count_mode='steps')]
+        # BaseLoggerは1番目でなければならない
+        g_callbacks = [cbks.BaseLogger()] + (g_callbacks or []) + [gan.history]
+        g_callbacks += [cbks.ProgbarLogger(count_mode='steps')]
         for c in g_callbacks:
             if isinstance(c, cbks.ProgbarLogger):
                 warnings.warn(UserWarning('Using a `keras.callbacks.ProgbarLogger, `'
@@ -173,9 +174,10 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
     step_size = int(ceil(len(d_inputs) / batch_size))
 
     discriminator.history = cbks.History()
-    d_callbacks = (d_callbacks or []) + [discriminator.history]
-    d_callbacks += [cbks.BaseLogger(),
-                    cbks.ProgbarLogger(count_mode='steps')]
+    # BaseLoggerは1番目でなければならない
+    d_callbacks = [cbks.BaseLogger()] + (d_callbacks or [])
+    d_callbacks += [discriminator.history]
+    d_callbacks += [ProgbarLogger(count_mode='steps')]
     for c in d_callbacks:
         if isinstance(c, cbks.ProgbarLogger):
             warnings.warn(UserWarning('Using a `keras.callbacks.ProgbarLogger, `'
@@ -194,9 +196,10 @@ def train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_s
     })
 
     gan.history = cbks.History()
-    g_callbacks = (g_callbacks or []) + [gan.history]
-    g_callbacks += [cbks.BaseLogger(),
-                    cbks.ProgbarLogger(count_mode='steps')]
+    # BaseLoggerは1番目でなければならない
+    g_callbacks = [cbks.BaseLogger()] + (g_callbacks or [])
+    g_callbacks += [gan.history]
+    g_callbacks += [ProgbarLogger(count_mode='steps')]
     for c in g_callbacks:
         if isinstance(c, cbks.ProgbarLogger):
             warnings.warn(UserWarning('Using a `keras.callbacks.ProgbarLogger, `'
