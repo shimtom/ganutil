@@ -14,10 +14,6 @@ from keras.utils import Progbar
 from .ensure_existing import ensure_directory
 
 
-def default_normalize(images):
-    return np.array(images * 127.5 + 127.5).astype(np.uint8)
-
-
 class GeneratedImage(cbks.Callback):
     def __init__(self, filepath, samples, normalize):
         super(GeneratedImage, self).__init__()
