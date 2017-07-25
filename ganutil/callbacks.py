@@ -60,16 +60,9 @@ class ValueGraph(cbks.Callback):
     def on_train_begin(self, logs={}):
         self.values = []
         self.epoch_values = []
-        self.total_value = 0.
-        self.total_size = 0
 
     def on_batch_end(self, batch, logs={}):
-        value = logs.get(self.name, 0.)
-        batch_size = logs.get('size', 0)
-
-        self.values.append(value)
-        self.total_value += value * batch_size
-        self.total_size += batch_size
+        self.values.append(logs.get(self.name, 0.))
 
         if not self.epoch_mode:
             filepath = self.filepath.format(
@@ -79,9 +72,7 @@ class ValueGraph(cbks.Callback):
             self._plot(filepath, self.values)
 
     def on_epoch_end(self, epoch, logs={}):
-        self.epoch_values.append(self.total_value / self.total_size)
-        self.total_value = 0.
-        self.total_size = 0.
+        self.epoch_values.append(logs.get(self.name, 0.))
 
         if self.epoch_mode:
             filepath = self.filepath.format(
@@ -126,16 +117,9 @@ class ValueHistory(cbks.Callback):
     def on_train_begin(self, logs={}):
         self.values = []
         self.epoch_values = []
-        self.total_value = 0.
-        self.total_size = 0
 
     def on_batch_end(self, batch, logs={}):
-        value = logs.get(self.name, 0.)
-        batch_size = logs.get('size', 0)
-
-        self.values.append(value)
-        self.total_value += value * batch_size
-        self.total_size += batch_size
+        self.values.append(logs.get(self.name, 0.))
 
         if not self.epoch_mode:
             filepath = self.filepath.format(
@@ -145,9 +129,7 @@ class ValueHistory(cbks.Callback):
             np.save(filepath, np.array(self.values))
 
     def on_epoch_end(self, epoch, logs={}):
-        self.epoch_values.append(self.total_value / self.total_size)
-        self.total_value = 0.
-        self.total_size = 0.
+        self.epoch_values.append(logs.get(self.name, 0.))
 
         if self.epoch_mode:
             filepath = self.filepath.format(
