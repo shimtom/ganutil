@@ -31,45 +31,6 @@ class TestCallbacks(TestCase):
                         break
             self.assertEqual(len(functions), 0)
 
-    def test_value_graph(self):
-        epoch_logs = {'value': 10}
-        batch_logs = {'size': 10, 'value': 1}
-        name = 'value'
-
-        with tempfile.TemporaryDirectory() as dirpath:
-            filepath = os.path.join(dirpath, '{epoch:02d}/graph.png')
-
-            callback = cbks.ValueGraph(filepath, name, sample_mode='epoch')
-            callback.on_train_begin()
-            for i in range(10):
-                callback.on_epoch_begin(i, epoch_logs)
-                for j in range(10):
-                    callback.on_batch_begin(j, batch_logs)
-                    callback.on_batch_end(j, batch_logs)
-                    self.assertFalse(os.path.isfile(
-                        filepath.format(epoch=i, batch=j)))
-                callback.on_epoch_end(i, epoch_logs)
-                self.assertTrue(os.path.isfile(
-                    filepath.format(epoch=i, batch=-1)))
-            callback.on_train_end()
-
-        with tempfile.TemporaryDirectory() as dirpath:
-            filepath = os.path.join(dirpath, '{batch:02d}/graph.png')
-
-            callback = cbks.ValueGraph(filepath, name, sample_mode='batch')
-            callback.on_train_begin()
-            for i in range(10):
-                callback.on_epoch_begin(i, epoch_logs)
-                for j in range(10):
-                    callback.on_batch_begin(j, batch_logs)
-                    callback.on_batch_end(j, batch_logs)
-                    self.assertTrue(os.path.isfile(
-                        filepath.format(epoch=i, batch=j)))
-                callback.on_epoch_end(i, epoch_logs)
-                self.assertFalse(os.path.isfile(
-                    filepath.format(epoch=i, batch=-1)))
-            callback.on_train_end()
-
 
 class TestGeneratedImage(TestCase):
     """ganutil.callbacks.GeneratedImageをテストするクラス."""
@@ -130,7 +91,14 @@ class TestValueGraph(TestCase):
             filepath = os.path.join(dirpath, '{epoch:02d}/graph.png')
 
             callback = cbks.ValueGraph(filepath, name, sample_mode='epoch')
+            self.assertEqual(callback.filepath, filepath)
+            self.assertEqual(callback.name, name)
+            self.assertTrue(callback.epoch_mode)
+
             callback.on_train_begin()
+            self.assertListEqual(callback.values, [])
+            self.assertListEqual(callback.epoch_values, [])
+
             for i in range(10):
                 callback.on_epoch_begin(i, epoch_logs)
                 for j in range(10):
@@ -142,12 +110,17 @@ class TestValueGraph(TestCase):
                 self.assertTrue(os.path.isfile(
                     filepath.format(epoch=i, batch=-1)))
             callback.on_train_end()
+            self.assertListEqual(callback.values, [1 for _ in range(10 * 10)])
+            self.assertListEqual(callback.epoch_values, [
+                                 10 for _ in range(10)])
 
         with tempfile.TemporaryDirectory() as dirpath:
             filepath = os.path.join(dirpath, '{batch:02d}/graph.png')
 
             callback = cbks.ValueGraph(filepath, name, sample_mode='batch')
             callback.on_train_begin()
+            self.assertListEqual(callback.values, [])
+            self.assertListEqual(callback.epoch_values, [])
             for i in range(10):
                 callback.on_epoch_begin(i, epoch_logs)
                 for j in range(10):
@@ -159,3 +132,6 @@ class TestValueGraph(TestCase):
                 self.assertFalse(os.path.isfile(
                     filepath.format(epoch=i, batch=-1)))
             callback.on_train_end()
+            self.assertListEqual(callback.values, [1 for _ in range(10 * 10)])
+            self.assertListEqual(callback.epoch_values, [
+                                 10 for _ in range(10)])
