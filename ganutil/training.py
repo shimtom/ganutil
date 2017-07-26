@@ -140,11 +140,11 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
                         g_batch_logs[n] = o
                     g_callbacks.on_batch_end(step, g_batch_logs)
 
-                d_callbacks.on_epoch_end(epoch, d_epoch_logs)
-                g_callbacks.on_epoch_end(epoch, g_epoch_logs)
+            d_callbacks.on_epoch_end(epoch, d_epoch_logs)
+            g_callbacks.on_epoch_end(epoch, g_epoch_logs)
 
-            d_callbacks.on_train_end()
-            g_callbacks.on_train_end()
+        d_callbacks.on_train_end()
+        g_callbacks.on_train_end()
 
     finally:
         if d_enqueuer is not None:
