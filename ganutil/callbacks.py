@@ -170,5 +170,5 @@ class ProgbarLogger(cbks.ProgbarLogger):
 class GanModelCheckpoint(cbks.ModelCheckpoint):
     """only use as generator Callback"""
 
-    def on_train_begin(self):
+    def on_train_begin(self, logs={}):
         self.model = self.model.layers[0]
