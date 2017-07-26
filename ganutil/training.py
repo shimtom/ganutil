@@ -21,6 +21,10 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
                   max_queue_size=10, workers=1, use_multiprocessing=False,
                   initial_epoch=0):
 
+    # FIXME: fix problem that processes stop in `use_multiprocessing=True`
+    if use_multiprocessing:
+        warnings.warn(UserWarning('Multi-process will not be working.'))
+
     d_is_sequence = isinstance(d_generator, Sequence)
     g_is_sequence = isinstance(g_generator, Sequence)
 
