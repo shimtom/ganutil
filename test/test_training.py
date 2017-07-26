@@ -167,7 +167,6 @@ class TestFitGenerator(TestCase):
                 targets = np.ones(len(inputs))
                 yield inputs, targets
 
-        df = tempfile.TemporaryFile(mode='a+')
 
         class DCallback(Callback):
             def __init__(this):
@@ -181,36 +180,28 @@ class TestFitGenerator(TestCase):
 
             def on_train_begin(this, logs={}):
                 this.count_on_train_begin += 1
-                df.write('D:on_train_begin %d' % this.count_on_train_begin)
                 self.assertDictEqual(logs, {})
 
             def on_train_end(this, logs={}):
                 this.count_on_train_end += 1
-                df.write('D:on_train_end %d' % this.count_on_train_end)
 
             def on_epoch_begin(this, epoch, logs={}):
                 this.count_on_epoch_begin += 1
-                df.write('D:on_epoch_begin %d' % this.count_on_epoch_begin)
                 self.assertDictEqual(logs, {})
 
             def on_epoch_end(this, epoch, logs={}):
                 this.count_on_epoch_end += 1
-                df.write('D:on_epoch_end %d' % this.count_on_epoch_end)
                 self.assertTrue('loss' in logs)
                 self.assertTrue('acc' in logs)
 
             def on_batch_begin(this, batch, logs={}):
                 this.count_on_batch_begin += 1
-                df.write('D:on_batch_begin %d' % this.count_on_batch_begin)
                 self.assertTrue('size' in logs)
 
             def on_batch_end(this, batch, logs={}):
                 this.count_on_batch_end += 1
-                df.write('D:on_batch_end %d' % this.count_on_batch_end)
                 self.assertTrue('loss' in logs)
                 self.assertTrue('acc' in logs)
-
-        gf = tempfile.TemporaryFile(mode='a+')
 
         class GCallback(Callback):
             def __init__(this):
@@ -224,32 +215,26 @@ class TestFitGenerator(TestCase):
 
             def on_train_begin(this, logs={}):
                 this.count_on_train_begin += 1
-                df.write('G:on_train_begin %d' % this.count_on_train_begin)
                 self.assertDictEqual(logs, {})
 
             def on_train_end(this, logs={}):
                 this.count_on_train_end += 1
-                df.write('G:on_train_end %d' % this.count_on_train_end)
 
             def on_epoch_begin(this, epoch, logs={}):
                 this.count_on_epoch_begin += 1
-                df.write('G:on_epoch_begin %d' % this.count_on_epoch_begin)
                 self.assertDictEqual(logs, {})
 
             def on_epoch_end(this, epoch, logs={}):
                 this.count_on_epoch_end += 1
-                df.write('G:on_epoch_end %d' % this.count_on_epoch_end)
                 self.assertTrue('loss' in logs)
                 self.assertTrue('acc' in logs)
 
             def on_batch_begin(this, batch, logs={}):
                 this.count_on_batch_begin += 1
-                df.write('G:on_batch_begin %d' % this.count_on_batch_begin)
                 self.assertTrue('size' in logs)
 
             def on_batch_end(this, batch, logs={}):
                 this.count_on_batch_end += 1
-                df.write('G:on_batch_end %d' % this.count_on_batch_end)
                 self.assertTrue('loss' in logs)
                 self.assertTrue('acc' in logs)
 
@@ -265,8 +250,7 @@ class TestFitGenerator(TestCase):
                       g_iteration_per_step=g_iteration_per_step,
                       epochs=epochs, d_callbacks=[d_callback],
                       g_callbacks=[g_callback])
-        df.close()
-        gf.close()
+
         self.assertEqual(d_callback.count_on_train_begin, 1)
         self.assertEqual(d_callback.count_on_train_end, 1)
         self.assertEqual(d_callback.count_on_epoch_begin, epochs)
