@@ -19,7 +19,7 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
                   steps_per_epoch, d_iteration_per_step=1, g_iteration_per_step=1,
                   epochs=1, d_callbacks=None, g_callbacks=None,
                   max_queue_size=10, workers=1, use_multiprocessing=False,
-                  shuffle=True, initial_epoch=0):
+                  initial_epoch=0):
 
     d_is_sequence = isinstance(d_generator, Sequence)
     g_is_sequence = isinstance(g_generator, Sequence)
@@ -38,7 +38,7 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
     try:
         if d_is_sequence:
             d_enqueuer = OrderedEnqueuer(
-                d_generator, use_multiprocessing=use_multiprocessing, shuffle=shuffle)
+                d_generator, use_multiprocessing=use_multiprocessing)
         else:
             d_enqueuer = GeneratorEnqueuer(
                 d_generator, use_multiprocessing=use_multiprocessing, wait_time=wait_time)
@@ -47,7 +47,7 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
 
         if g_is_sequence:
             g_enqueuer = OrderedEnqueuer(
-                g_generator, use_multiprocessing=use_multiprocessing, shuffle=shuffle)
+                g_generator, use_multiprocessing=use_multiprocessing)
         else:
             g_enqueuer = GeneratorEnqueuer(
                 g_generator, use_multiprocessing=use_multiprocessing, wait_time=wait_time)
