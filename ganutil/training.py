@@ -58,7 +58,8 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
         # BaseLoggerは1番目でなければならない
         d_callbacks = [cbks.BaseLogger()] + (d_callbacks or [])
         d_callbacks += [discriminator.history]
-        d_callbacks += [GanProgbarLogger(name='Discriminator',count_mode='steps')]
+        d_callbacks += [GanProgbarLogger(name='Discriminator',
+                                         count_mode='steps')]
         for c in d_callbacks:
             if isinstance(c, cbks.ProgbarLogger):
                 warnings.warn(UserWarning('Using a `keras.callbacks.ProgbarLogger, `'
@@ -79,7 +80,7 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
         gan.history = cbks.History()
         # BaseLoggerは1番目でなければならない
         g_callbacks = [cbks.BaseLogger()] + (g_callbacks or []) + [gan.history]
-        g_callbacks += [GanProgbarLogger(name='Generator',count_mode='steps')]
+        g_callbacks += [GanProgbarLogger(name='Generator', count_mode='steps')]
         for c in g_callbacks:
             if isinstance(c, cbks.ProgbarLogger):
                 warnings.warn(UserWarning('Using a `keras.callbacks.ProgbarLogger, `'
