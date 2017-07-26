@@ -1,11 +1,17 @@
+import math
 import tempfile
+import unittest
 from unittest import TestCase, skip
 
+import ganutil.callbacks as cbks
 import numpy as np
 import tensorflow as tf
 from ganutil import fit_generator
-from keras.callbacks import Callback
-from keras.layers import Activation, Dense, Flatten, Reshape
+from keras.callbacks import Callback, ModelCheckpoint
+from keras.datasets import mnist
+from keras.layers import (Activation, BatchNormalization, Dense, Flatten,
+                          Reshape)
+from keras.layers.convolutional import Conv2D, Conv2DTranspose
 from keras.models import Sequential
 from keras.optimizers import Adam
 from keras.utils import Sequence
@@ -36,32 +42,109 @@ class TestFitGenerator(TestCase):
         self.gan = gan
         self.gan.compile(Adam(), 'binary_crossentropy', metrics=['accuracy'])
 
+    @skip
     def test_fit_generator(self):
         """ganutil.fit_generatorでganが訓練されることを確認する"""
-        def d_generator():
+        def discriminator_model():
+            model = Sequential()
+            model.add(Conv2D(64, (5, 5), strides=(2, 2),
+                             padding='same', input_shape=(28, 28, 1)))
+            model.add(Activation('tanh'))
+            model.add(Conv2D(128, (5, 5), strides=(2, 2), padding='same'))
+            model.add(Activation('tanh'))
+            model.add(Flatten())
+            model.add(Dense(1024))
+            model.add(Activation('tanh'))
+            model.add(Dense(1))
+            model.add(Activation('sigmoid'))
+            return model
+
+        def generator_model():
+            model = Sequential()
+            model.add(Dense(1024, input_dim=100))
+            model.add(Activation('tanh'))
+            model.add(Dense(128 * 7 * 7))
+            model.add(BatchNormalization())
+            model.add(Activation('tanh'))
+            model.add(Reshape((7, 7, 128), input_shape=(128 * 7 * 7,)))
+            model.add(Conv2DTranspose(
+                64, (5, 5), strides=(2, 2), padding='same'))
+            model.add(Activation('tanh'))
+            model.add(Conv2DTranspose(
+                1, (5, 5), strides=(2, 2), padding='same'))
+            model.add(Activation('tanh'))
+            return model
+        generator = generator_model()
+        generator._make_predict_function()
+
+        generator_graph = tf.get_default_graph()
+
+        discriminator = discriminator_model()
+        discriminator.compile(
+            Adam(lr=0.0005), 'binary_crossentropy', metrics=['accuracy'])
+        discriminator.trainable = False
+        gan = Sequential((generator, discriminator))
+
+        gan.compile(Adam(lr=0.0005), 'binary_crossentropy',
+                    metrics=['accuracy'])
+
+        (X_train, y_train), (X_test, y_test) = mnist.load_data()
+        mnist_data = np.array(X_train).reshape((-1, 28, 28, 1))
+        mnist_data = (mnist_data - 127.5) / 127.5
+        data_size = len(mnist_data)
+
+        def d_generator(batch_size):
             while True:
-                with self.generator_graph.as_default():
-                    ginputs = np.random.uniform(-1,
-                                                1, [5, 32]).astype(np.float32)
-                    inputs = self.generator.predict_on_batch(ginputs)
-                    targets = np.zeros(len(inputs), dtype=np.int)
+                indices = np.random.permutation(data_size)
+                for i in range(0, math.ceil(data_size / batch_size), batch_size):
+                    with generator_graph.as_default():
+                        ginputs = np.random.uniform(-1, 1, [batch_size, 100])
+                        ginputs = ginputs.astype(np.float32)
+                        inputs = generator.predict_on_batch(ginputs)
+                        targets = np.zeros(len(inputs), dtype=np.int)
                     yield inputs, targets
 
-                inputs = np.zeros([5, 4, 4, 1])
-                targets = np.ones(len(inputs))
-                yield inputs, targets
+                    inputs = mnist_data[indices[i:i + batch_size]]
+                    targets = np.ones(len(inputs))
+                    yield inputs, targets
 
-        def g_generator():
+        def g_generator(batch_size):
             while True:
-                inputs = np.random.uniform(-1, 1, [5, 32]).astype(np.float32)
+                inputs = np.random.uniform(-1, 1, [batch_size, 100])
+                inputs = inputs.astype(np.float32)
                 targets = np.ones(len(inputs))
                 yield inputs, targets
 
-        epochs = 5
-        steps_per_epoch = 10
-        fit_generator(self.gan, self.discriminator, self.generator,
-                      d_generator(), g_generator(), steps_per_epoch,
-                      epochs=epochs, initial_epoch=0)
+        d_callbacks = [cbks.LossGraph('./save/{epoch:02d}/dloss.png'),
+                       cbks.AccuracyGraph('./save/{epoch:02d}/dacc.png'),
+                       cbks.LossHistory('./save/{epoch:02d}/dloss.npy'),
+                       cbks.AccuracyHistory('./save/{epoch:02d}/dacc.npy'),
+                       ModelCheckpoint('./save/discriminator.h5')
+                       ]
+        samples = np.random.uniform(-1, 1, [25, 100]).astype(np.float32)
+        samples[0] = -1.
+        samples[-1] = 1.
+        samples[len(samples) // 2] = 0
+
+        def normalize(images):
+            return np.array(images) * 127.5 + 127.5
+
+        g_callbacks = [cbks.LossGraph('./save/{epoch:02d}/dloss.png'),
+                       cbks.AccuracyGraph('./save/{epoch:02d}/dacc.png'),
+                       cbks.LossHistory('./save/{epoch:02d}/dloss.npy'),
+                       cbks.AccuracyHistory('./save/{epoch:02d}/dacc.npy'),
+                       cbks.GeneratedImage('./save/{epoch:02d}/images.png',
+                                           samples,
+                                           normalize),
+                       cbks.GanModelCheckpoint('./save/generator.h5')]
+
+        epochs = 20
+        batch_size = 128
+        steps_per_epoch = math.ceil(data_size / batch_size)
+        fit_generator(gan, discriminator, generator, d_generator(batch_size),
+                      g_generator(batch_size), steps_per_epoch, epochs=epochs,
+                      d_callbacks=d_callbacks, g_callbacks=g_callbacks,
+                      initial_epoch=0)
 
     def test_callbacks(self):
         """コールバックが正しい回数呼び出されることを確認する."""
@@ -411,3 +494,7 @@ class TestFitGenerator(TestCase):
                          g_iteration_per_step * steps_per_epoch * epochs)
         self.assertEqual(g_callback.count_on_batch_end,
                          g_iteration_per_step * steps_per_epoch * epochs)
+
+
+if __name__ == '__main__':
+    unittest.main()
