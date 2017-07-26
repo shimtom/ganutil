@@ -28,6 +28,7 @@ class GeneratedImage(cbks.Callback):
 
         generator = self.model.layers[0]
         images = self.normalize(generator.predict_on_batch(self.samples))
+        images = np.array(images).astype(np.uint8)
         if len(images.shape) == 4 and images.shape[-1] == 1:
             images = images.reshape(images.shape[:-1])
 
