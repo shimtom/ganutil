@@ -106,40 +106,42 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
         d_callbacks.on_train_begin()
         g_callbacks.on_train_begin()
 
+        d_epoch_logs = {}
+        g_epoch_logs = {}
         for epoch in range(initial_epoch, epochs):
-            d_callbacks.on_epoch_begin(epoch)
-            g_callbacks.on_epoch_begin(epoch)
+            d_callbacks.on_epoch_begin(epoch, d_epoch_logs)
+            g_callbacks.on_epoch_begin(epoch, g_epoch_logs)
             for step in range(steps_per_epoch):
                 d_batch_logs = {}
                 for index in range(d_iteration_per_step):
                     samples = next(d_sample_generator)
                     d_batch_logs['batch'] = step
                     d_batch_logs['iteration'] = index
-                    d_batch_logs['size'] = len(samples[0].shape[0])
+                    d_batch_logs['size'] = samples[0].shape[0]
                     d_callbacks.on_batch_begin(step, d_batch_logs)
                     d_outs = discriminator.train_on_batch(*samples)
                     if not isinstance(d_outs, list):
                         d_outs = [d_outs]
                     for n, o in zip(discriminator.metrics_names, d_outs):
                         d_batch_logs[n] = o
-                    d_callbacks.on_batch_end(step)
+                    d_callbacks.on_batch_end(step, d_batch_logs)
 
                 g_batch_logs = {}
                 for index in range(g_iteration_per_step):
                     samples = next(g_sample_generator)
                     g_batch_logs['batch'] = step
                     g_batch_logs['iteration'] = index
-                    g_batch_logs['size'] = len(samples[0].shape[0])
+                    g_batch_logs['size'] = samples[0].shape[0]
                     g_callbacks.on_batch_begin(step, g_batch_logs)
                     g_outs = gan.train_on_batch(*samples)
                     if not isinstance(g_outs, list):
                         g_outs = [g_outs]
                     for n, o in zip(gan.metrics_names, d_outs):
                         g_batch_logs[n] = o
-                    g_callbacks.on_batch_end(step)
+                    g_callbacks.on_batch_end(step, g_batch_logs)
 
-                d_callbacks.on_epoch_end(epoch)
-                g_callbacks.on_epoch_end(epoch)
+                d_callbacks.on_epoch_end(epoch, d_epoch_logs)
+                g_callbacks.on_epoch_end(epoch, g_epoch_logs)
 
             d_callbacks.on_train_end()
             g_callbacks.on_train_end()
