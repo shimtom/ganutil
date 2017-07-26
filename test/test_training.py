@@ -1,14 +1,13 @@
-import os
 import tempfile
 from unittest import TestCase
 
 import numpy as np
+import tensorflow as tf
 from ganutil import fit_generator
+from keras.callbacks import Callback
 from keras.layers import Activation, Dense, Flatten, Reshape
 from keras.models import Sequential
 from keras.optimizers import Adam
-from keras.callbacks import Callback
-import tensorflow as tf
 
 
 class TestFitGenerator(TestCase):
@@ -28,7 +27,8 @@ class TestFitGenerator(TestCase):
         discriminator.add(Dense(1))
         discriminator.add(Activation('sigmoid'))
         self.discriminator = discriminator
-        self.discriminator.compile(Adam(), 'binary_crossentropy', metrics=['accuracy'])
+        self.discriminator.compile(
+            Adam(), 'binary_crossentropy', metrics=['accuracy'])
         self.discriminator.trainable = False
 
         gan = Sequential((self.generator, self.discriminator))
@@ -40,11 +40,12 @@ class TestFitGenerator(TestCase):
         pass
 
     def test_callbacks(self):
-        """コールバックが正しい順番で呼び出されることを確認する."""
+        """コールバックが正しい回数呼び出されることを確認する."""
         def d_generator():
             while True:
                 with self.generator_graph.as_default():
-                    ginputs = np.random.uniform(-1, 1, [5, 32]).astype(np.float32)
+                    ginputs = np.random.uniform(-1,
+                                                1, [5, 32]).astype(np.float32)
                     inputs = self.generator.predict_on_batch(ginputs)
                     targets = np.zeros(len(inputs), dtype=np.int)
                     yield inputs, targets
@@ -60,6 +61,7 @@ class TestFitGenerator(TestCase):
                 yield inputs, targets
 
         df = tempfile.TemporaryFile(mode='a+')
+
         class DCallback(Callback):
             def __init__(this):
                 super(DCallback, this).__init__()
@@ -102,6 +104,7 @@ class TestFitGenerator(TestCase):
                 self.assertTrue('acc' in logs)
 
         gf = tempfile.TemporaryFile(mode='a+')
+
         class GCallback(Callback):
             def __init__(this):
                 super(GCallback, this).__init__()
@@ -143,11 +146,33 @@ class TestFitGenerator(TestCase):
                 self.assertTrue('loss' in logs)
                 self.assertTrue('acc' in logs)
 
-
-        fit_generator(self.gan, self.discriminator, self.generator, d_generator(),
-                      g_generator(), 10, epochs=5, d_callbacks=[DCallback()], g_callbacks=[GCallback()])
+        d_callback = DCallback()
+        g_callback = GCallback()
+        epochs = 5
+        steps_per_epoch = 10
+        fit_generator(self.gan, self.discriminator, self.generator,
+                      d_generator(), g_generator(), steps_per_epoch,
+                      epochs=epochs, d_callbacks=[d_callback],
+                      g_callbacks=[g_callback])
         df.close()
         gf.close()
+        self.assertEqual(d_callback.count_on_train_begin, 1)
+        self.assertEqual(d_callback.count_on_train_end, 1)
+        self.assertEqual(d_callback.count_on_epoch_begin, epochs)
+        self.assertEqual(d_callback.count_on_epoch_end, epochs)
+        self.assertEqual(d_callback.count_on_batch_begin,
+                         steps_per_epoch * epochs)
+        self.assertEqual(d_callback.count_on_batch_end,
+                         steps_per_epoch * epochs)
+
+        self.assertEqual(g_callback.count_on_train_begin, 1)
+        self.assertEqual(g_callback.count_on_train_end, 1)
+        self.assertEqual(g_callback.count_on_epoch_begin, epochs)
+        self.assertEqual(g_callback.count_on_epoch_end, epochs)
+        self.assertEqual(g_callback.count_on_batch_begin,
+                         steps_per_epoch * epochs)
+        self.assertEqual(g_callback.count_on_batch_end,
+                         steps_per_epoch * epochs)
 
     def test_steps_per_epoch(self):
         """1エポック中に指定された回数訓練されることを確認する."""
