@@ -1,10 +1,12 @@
 import math
+import tempfile
 import unittest
 from unittest import TestCase, skip
 
 import ganutil.callbacks as cbks
 import numpy as np
 import pytest
+import os
 import tensorflow as tf
 from ganutil import fit_generator
 from keras.callbacks import Callback, ModelCheckpoint
@@ -119,6 +121,9 @@ class TestFitGenerator(TestCase):
 
     def test_fit_generator(self):
         """ganutil.fit_generatorでganが訓練されることを確認する"""
+        tempdir = tempfile.TemporaryDirectory()
+        dirpath = tempdir.name
+
         def discriminator_model():
             model = Sequential()
             model.add(Conv2D(64, (5, 5), strides=(2, 2),
@@ -190,11 +195,11 @@ class TestFitGenerator(TestCase):
                 targets = np.ones(len(inputs))
                 yield inputs, targets
 
-        d_callbacks = [cbks.LossGraph('./save/{epoch:02d}/dloss.png'),
-                       cbks.AccuracyGraph('./save/{epoch:02d}/dacc.png'),
-                       cbks.LossHistory('./save/{epoch:02d}/dloss.npy'),
-                       cbks.AccuracyHistory('./save/{epoch:02d}/dacc.npy'),
-                       ModelCheckpoint('./save/discriminator.h5')
+        d_callbacks = [cbks.LossGraph(os.path.join(dirpath,'save/{epoch:02d}/dloss.png')),
+                       cbks.AccuracyGraph(os.path.join(dirpath,'save/{epoch:02d}/dacc.png')),
+                       cbks.LossHistory(os.path.join(dirpath,'save/{epoch:02d}/dloss.npy')),
+                       cbks.AccuracyHistory(os.path.join(dirpath,'save/{epoch:02d}/dacc.npy')),
+                       ModelCheckpoint(os.path.join(dirpath,'save/discriminator.h5'))
                        ]
         samples = np.random.uniform(-1, 1, [25, 100]).astype(np.float32)
         samples[0] = -1.
@@ -204,16 +209,16 @@ class TestFitGenerator(TestCase):
         def normalize(images):
             return np.array(images) * 127.5 + 127.5
 
-        g_callbacks = [cbks.LossGraph('./save/{epoch:02d}/gloss.png'),
-                       cbks.AccuracyGraph('./save/{epoch:02d}/gacc.png'),
-                       cbks.LossHistory('./save/{epoch:02d}/gloss.npy'),
-                       cbks.AccuracyHistory('./save/{epoch:02d}/gacc.npy'),
-                       cbks.GeneratedImage('./save/{epoch:02d}/images.png',
+        g_callbacks = [cbks.LossGraph(os.path.join(dirpath, 'save/{epoch:02d}/gloss.png')),
+                       cbks.AccuracyGraph(os.path.join(dirpath, '/save/{epoch:02d}/gacc.png')),
+                       cbks.LossHistory(os.path.join(dirpath, '/save/{epoch:02d}/gloss.npy')),
+                       cbks.AccuracyHistory(os.path.join(dirpath, './save/{epoch:02d}/gacc.npy')),
+                       cbks.GeneratedImage(os.path.join(dirpath, './save/{epoch:02d}/images.png'),
                                            samples,
                                            normalize),
-                       cbks.GanModelCheckpoint('./save/generator.h5')]
+                       cbks.GanModelCheckpoint(os.path.join(dirpath,'./save/generator.h5'))]
 
-        epochs = 20
+        epochs = 5
         batch_size = 128
         steps_per_epoch = math.ceil(data_size / batch_size)
         fit_generator(gan, discriminator, generator, d_generator(batch_size),
@@ -279,6 +284,7 @@ class TestFitGenerator(TestCase):
     def test_multi_processing(self):
         """データのジェネレートをマルチプロセスで動作できることを確認"""
         gan, generator, discriminator, generator_graph = create_test_gan()
+
         class DSequence(Sequence):
             def __init__(this, batch_size, data_size):
                 this.batch_size = batch_size
