@@ -1,10 +1,10 @@
 import math
-import tempfile
 import unittest
 from unittest import TestCase, skip
 
 import ganutil.callbacks as cbks
 import numpy as np
+import pytest
 import tensorflow as tf
 from ganutil import fit_generator
 from keras.callbacks import Callback, ModelCheckpoint
@@ -17,31 +17,105 @@ from keras.optimizers import Adam
 from keras.utils import Sequence
 
 
+class DCallback(Callback):
+    def __init__(this):
+        super(DCallback, this).__init__()
+        this.count_on_train_begin = 0
+        this.count_on_train_end = 0
+        this.count_on_epoch_begin = 0
+        this.count_on_epoch_end = 0
+        this.count_on_batch_begin = 0
+        this.count_on_batch_end = 0
+
+    def on_train_begin(this, logs={}):
+        this.count_on_train_begin += 1
+        assert logs == {}
+
+    def on_train_end(this, logs={}):
+        this.count_on_train_end += 1
+
+    def on_epoch_begin(this, epoch, logs={}):
+        this.count_on_epoch_begin += 1
+        assert logs == {}
+
+    def on_epoch_end(this, epoch, logs={}):
+        this.count_on_epoch_end += 1
+        assert 'loss' in logs
+        assert 'acc' in logs
+
+    def on_batch_begin(this, batch, logs={}):
+        this.count_on_batch_begin += 1
+        assert 'size' in logs
+
+    def on_batch_end(this, batch, logs={}):
+        this.count_on_batch_end += 1
+        assert 'loss' in logs
+        assert 'acc' in logs
+
+
+class GCallback(Callback):
+    def __init__(this):
+        super(GCallback, this).__init__()
+        this.count_on_train_begin = 0
+        this.count_on_train_end = 0
+        this.count_on_epoch_begin = 0
+        this.count_on_epoch_end = 0
+        this.count_on_batch_begin = 0
+        this.count_on_batch_end = 0
+
+    def on_train_begin(this, logs={}):
+        this.count_on_train_begin += 1
+        assert logs == {}
+
+    def on_train_end(this, logs={}):
+        this.count_on_train_end += 1
+
+    def on_epoch_begin(this, epoch, logs={}):
+        this.count_on_epoch_begin += 1
+        assert logs == {}
+
+    def on_epoch_end(this, epoch, logs={}):
+        this.count_on_epoch_end += 1
+        assert 'loss' in logs
+        assert 'acc' in logs
+
+    def on_batch_begin(this, batch, logs={}):
+        this.count_on_batch_begin += 1
+        assert 'size' in logs
+
+    def on_batch_end(this, batch, logs={}):
+        this.count_on_batch_end += 1
+        assert 'loss' in logs
+        assert 'acc' in logs
+
+
+def create_test_gan():
+    generator = Sequential()
+    generator.add(Dense(16, input_shape=(32,)))
+    generator.add(Activation('tanh'))
+    generator.add(Reshape((4, 4, 1)))
+    generator = generator
+    generator._make_predict_function()
+    generator_graph = tf.get_default_graph()
+
+    discriminator = Sequential()
+    discriminator.add(Flatten(input_shape=(4, 4, 1)))
+    discriminator.add(Dense(1))
+    discriminator.add(Activation('sigmoid'))
+    discriminator = discriminator
+    discriminator.compile(
+        Adam(), 'binary_crossentropy', metrics=['accuracy'])
+    discriminator.trainable = False
+
+    gan = Sequential((generator, discriminator))
+    gan = gan
+    gan.compile(Adam(), 'binary_crossentropy', metrics=['accuracy'])
+
+    return gan, generator, discriminator, generator_graph
+
+
 class TestFitGenerator(TestCase):
     """ganutil.fit_generator()のテストを行うクラス."""
-
-    def setUp(self):
-        generator = Sequential()
-        generator.add(Dense(16, input_shape=(32,)))
-        generator.add(Activation('tanh'))
-        generator.add(Reshape((4, 4, 1)))
-        self.generator = generator
-        self.generator._make_predict_function()
-        self.generator_graph = tf.get_default_graph()
-
-        discriminator = Sequential()
-        discriminator.add(Flatten(input_shape=(4, 4, 1)))
-        discriminator.add(Dense(1))
-        discriminator.add(Activation('sigmoid'))
-        self.discriminator = discriminator
-        self.discriminator.compile(
-            Adam(), 'binary_crossentropy', metrics=['accuracy'])
-        self.discriminator.trainable = False
-
-        gan = Sequential((self.generator, self.discriminator))
-        self.gan = gan
-        self.gan.compile(Adam(), 'binary_crossentropy', metrics=['accuracy'])
-
     @skip
     def test_fit_generator(self):
         """ganutil.fit_generatorでganが訓練されることを確認する"""
@@ -73,15 +147,14 @@ class TestFitGenerator(TestCase):
             model.add(Conv2DTranspose(
                 1, (5, 5), strides=(2, 2), padding='same'))
             model.add(Activation('tanh'))
-            return model
-        generator = generator_model()
-        generator._make_predict_function()
-
-        generator_graph = tf.get_default_graph()
+            model._make_predict_function()
+            graph = tf.get_default_graph()
+            return model, graph
+        generator, generator_graph = generator_model()
 
         discriminator = discriminator_model()
-        discriminator.compile(
-            Adam(lr=0.0005), 'binary_crossentropy', metrics=['accuracy'])
+        discriminator.compile(Adam(lr=0.0005),
+                              'binary_crossentropy', metrics=['accuracy'])
         discriminator.trainable = False
         gan = Sequential((generator, discriminator))
 
@@ -89,7 +162,8 @@ class TestFitGenerator(TestCase):
                     metrics=['accuracy'])
 
         (X_train, y_train), (X_test, y_test) = mnist.load_data()
-        mnist_data = np.array(X_train).reshape((-1, 28, 28, 1))
+        mnist_data = np.array(
+            X_train, dtype=np.float32).reshape((-1, 28, 28, 1))
         mnist_data = (mnist_data - 127.5) / 127.5
         data_size = len(mnist_data)
 
@@ -101,8 +175,8 @@ class TestFitGenerator(TestCase):
                         ginputs = np.random.uniform(-1, 1, [batch_size, 100])
                         ginputs = ginputs.astype(np.float32)
                         inputs = generator.predict_on_batch(ginputs)
-                        targets = np.zeros(len(inputs), dtype=np.int)
-                    yield inputs, targets
+                        targets = np.zeros(len(inputs), dtype=np.int64)
+                        yield inputs, targets
 
                     inputs = mnist_data[indices[i:i + batch_size]]
                     targets = np.ones(len(inputs))
@@ -129,10 +203,10 @@ class TestFitGenerator(TestCase):
         def normalize(images):
             return np.array(images) * 127.5 + 127.5
 
-        g_callbacks = [cbks.LossGraph('./save/{epoch:02d}/dloss.png'),
-                       cbks.AccuracyGraph('./save/{epoch:02d}/dacc.png'),
-                       cbks.LossHistory('./save/{epoch:02d}/dloss.npy'),
-                       cbks.AccuracyHistory('./save/{epoch:02d}/dacc.npy'),
+        g_callbacks = [cbks.LossGraph('./save/{epoch:02d}/gloss.png'),
+                       cbks.AccuracyGraph('./save/{epoch:02d}/gacc.png'),
+                       cbks.LossHistory('./save/{epoch:02d}/gloss.npy'),
+                       cbks.AccuracyHistory('./save/{epoch:02d}/gacc.npy'),
                        cbks.GeneratedImage('./save/{epoch:02d}/images.png',
                                            samples,
                                            normalize),
@@ -148,12 +222,14 @@ class TestFitGenerator(TestCase):
 
     def test_callbacks(self):
         """コールバックが正しい回数呼び出されることを確認する."""
+        gan, generator, discriminator, generator_graph = create_test_gan()
+
         def d_generator():
             while True:
-                with self.generator_graph.as_default():
+                with generator_graph.as_default():
                     ginputs = np.random.uniform(-1,
                                                 1, [5, 32]).astype(np.float32)
-                    inputs = self.generator.predict_on_batch(ginputs)
+                    inputs = generator.predict_on_batch(ginputs)
                     targets = np.zeros(len(inputs), dtype=np.int)
                     yield inputs, targets
 
@@ -167,84 +243,13 @@ class TestFitGenerator(TestCase):
                 targets = np.ones(len(inputs))
                 yield inputs, targets
 
-
-        class DCallback(Callback):
-            def __init__(this):
-                super(DCallback, this).__init__()
-                this.count_on_train_begin = 0
-                this.count_on_train_end = 0
-                this.count_on_epoch_begin = 0
-                this.count_on_epoch_end = 0
-                this.count_on_batch_begin = 0
-                this.count_on_batch_end = 0
-
-            def on_train_begin(this, logs={}):
-                this.count_on_train_begin += 1
-                self.assertDictEqual(logs, {})
-
-            def on_train_end(this, logs={}):
-                this.count_on_train_end += 1
-
-            def on_epoch_begin(this, epoch, logs={}):
-                this.count_on_epoch_begin += 1
-                self.assertDictEqual(logs, {})
-
-            def on_epoch_end(this, epoch, logs={}):
-                this.count_on_epoch_end += 1
-                self.assertTrue('loss' in logs)
-                self.assertTrue('acc' in logs)
-
-            def on_batch_begin(this, batch, logs={}):
-                this.count_on_batch_begin += 1
-                self.assertTrue('size' in logs)
-
-            def on_batch_end(this, batch, logs={}):
-                this.count_on_batch_end += 1
-                self.assertTrue('loss' in logs)
-                self.assertTrue('acc' in logs)
-
-        class GCallback(Callback):
-            def __init__(this):
-                super(GCallback, this).__init__()
-                this.count_on_train_begin = 0
-                this.count_on_train_end = 0
-                this.count_on_epoch_begin = 0
-                this.count_on_epoch_end = 0
-                this.count_on_batch_begin = 0
-                this.count_on_batch_end = 0
-
-            def on_train_begin(this, logs={}):
-                this.count_on_train_begin += 1
-                self.assertDictEqual(logs, {})
-
-            def on_train_end(this, logs={}):
-                this.count_on_train_end += 1
-
-            def on_epoch_begin(this, epoch, logs={}):
-                this.count_on_epoch_begin += 1
-                self.assertDictEqual(logs, {})
-
-            def on_epoch_end(this, epoch, logs={}):
-                this.count_on_epoch_end += 1
-                self.assertTrue('loss' in logs)
-                self.assertTrue('acc' in logs)
-
-            def on_batch_begin(this, batch, logs={}):
-                this.count_on_batch_begin += 1
-                self.assertTrue('size' in logs)
-
-            def on_batch_end(this, batch, logs={}):
-                this.count_on_batch_end += 1
-                self.assertTrue('loss' in logs)
-                self.assertTrue('acc' in logs)
-
         d_callback = DCallback()
         g_callback = GCallback()
         epochs = 5
         steps_per_epoch = 10
         d_iteration_per_step = 3
         g_iteration_per_step = 2
-        fit_generator(self.gan, self.discriminator, self.generator,
+        fit_generator(gan, discriminator, generator,
                       d_generator(), g_generator(), steps_per_epoch,
                       d_iteration_per_step=d_iteration_per_step,
                       g_iteration_per_step=g_iteration_per_step,
