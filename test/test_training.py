@@ -277,6 +277,7 @@ class TestFitGenerator(TestCase):
     @skip
     def test_multi_processing(self):
         """データのジェネレートをマルチプロセスで動作できることを確認"""
+        gan, generator, discriminator, generator_graph = create_test_gan()
         class DSequence(Sequence):
             def __init__(this, batch_size, data_size):
                 this.batch_size = batch_size
@@ -290,10 +291,10 @@ class TestFitGenerator(TestCase):
                     A batch
                 """
                 if index % 2 == 0:
-                    with self.generator_graph.as_default():
+                    with generator_graph.as_default():
                         ginputs = np.random.uniform(-1, 1,
                                                     [this.batch_size, 32]).astype(np.float32)
-                        inputs = self.generator.predict_on_batch(ginputs)
+                        inputs = generator.predict_on_batch(ginputs)
                         targets = np.zeros(len(inputs), dtype=np.int)
                 else:
                     inputs = np.zeros([this.batch_size, 4, 4, 1])
@@ -333,10 +334,10 @@ class TestFitGenerator(TestCase):
 
         def d_generator():
             while True:
-                with self.generator_graph.as_default():
+                with generator_graph.as_default():
                     ginputs = np.random.uniform(-1,
                                                 1, [5, 32]).astype(np.float32)
-                    inputs = self.generator.predict_on_batch(ginputs)
+                    inputs = generator.predict_on_batch(ginputs)
                     targets = np.zeros(len(inputs), dtype=np.int)
                     yield inputs, targets
 
@@ -350,83 +351,13 @@ class TestFitGenerator(TestCase):
                 targets = np.ones(len(inputs))
                 yield inputs, targets
 
-        class DCallback(Callback):
-            def __init__(this):
-                super(DCallback, this).__init__()
-                this.count_on_train_begin = 0
-                this.count_on_train_end = 0
-                this.count_on_epoch_begin = 0
-                this.count_on_epoch_end = 0
-                this.count_on_batch_begin = 0
-                this.count_on_batch_end = 0
-
-            def on_train_begin(this, logs={}):
-                this.count_on_train_begin += 1
-                self.assertDictEqual(logs, {})
-
-            def on_train_end(this, logs={}):
-                this.count_on_train_end += 1
-
-            def on_epoch_begin(this, epoch, logs={}):
-                this.count_on_epoch_begin += 1
-                self.assertDictEqual(logs, {})
-
-            def on_epoch_end(this, epoch, logs={}):
-                this.count_on_epoch_end += 1
-                self.assertTrue('loss' in logs)
-                self.assertTrue('acc' in logs)
-
-            def on_batch_begin(this, batch, logs={}):
-                this.count_on_batch_begin += 1
-                self.assertTrue('size' in logs)
-
-            def on_batch_end(this, batch, logs={}):
-                this.count_on_batch_end += 1
-                self.assertTrue('loss' in logs)
-                self.assertTrue('acc' in logs)
-
-        class GCallback(Callback):
-            def __init__(this):
-                super(GCallback, this).__init__()
-                this.count_on_train_begin = 0
-                this.count_on_train_end = 0
-                this.count_on_epoch_begin = 0
-                this.count_on_epoch_end = 0
-                this.count_on_batch_begin = 0
-                this.count_on_batch_end = 0
-
-            def on_train_begin(this, logs={}):
-                this.count_on_train_begin += 1
-                self.assertDictEqual(logs, {})
-
-            def on_train_end(this, logs={}):
-                this.count_on_train_end += 1
-
-            def on_epoch_begin(this, epoch, logs={}):
-                this.count_on_epoch_begin += 1
-                self.assertDictEqual(logs, {})
-
-            def on_epoch_end(this, epoch, logs={}):
-                this.count_on_epoch_end += 1
-                self.assertTrue('loss' in logs)
-                self.assertTrue('acc' in logs)
-
-            def on_batch_begin(this, batch, logs={}):
-                this.count_on_batch_begin += 1
-                self.assertTrue('size' in logs)
-
-            def on_batch_end(this, batch, logs={}):
-                this.count_on_batch_end += 1
-                self.assertTrue('loss' in logs)
-                self.assertTrue('acc' in logs)
-
         d_callback = DCallback()
         g_callback = GCallback()
         epochs = 5
         steps_per_epoch = 10
         d_iteration_per_step = 3
         g_iteration_per_step = 2
-        fit_generator(self.gan, self.discriminator, self.generator,
+        fit_generator(gan, discriminator, generator,
                       d_generator(), g_generator(), steps_per_epoch,
                       d_iteration_per_step=d_iteration_per_step,
                       g_iteration_per_step=g_iteration_per_step,
@@ -458,7 +389,7 @@ class TestFitGenerator(TestCase):
         steps_per_epoch = 10
         d_iteration_per_step = 3
         g_iteration_per_step = 2
-        fit_generator(self.gan, self.discriminator, self.generator,
+        fit_generator(gan, discriminator, generator,
                       DSequence(5, 30), GSequence(5, 20), steps_per_epoch,
                       d_iteration_per_step=d_iteration_per_step,
                       g_iteration_per_step=g_iteration_per_step,
