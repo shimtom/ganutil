@@ -116,7 +116,7 @@ def create_test_gan():
 
 class TestFitGenerator(TestCase):
     """ganutil.fit_generator()のテストを行うクラス."""
-    @skip
+
     def test_fit_generator(self):
         """ganutil.fit_generatorでganが訓練されることを確認する"""
         def discriminator_model():
@@ -147,10 +147,11 @@ class TestFitGenerator(TestCase):
             model.add(Conv2DTranspose(
                 1, (5, 5), strides=(2, 2), padding='same'))
             model.add(Activation('tanh'))
-            model._make_predict_function()
-            graph = tf.get_default_graph()
-            return model, graph
-        generator, generator_graph = generator_model()
+
+            return model
+        generator = generator_model()
+        generator._make_predict_function()
+        generator_graph = tf.get_default_graph()
 
         discriminator = discriminator_model()
         discriminator.compile(Adam(lr=0.0005),
