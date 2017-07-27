@@ -40,15 +40,16 @@ def fit_generator(gan, discriminator, generator, d_generator, g_generator,
     wait_time = 0.01  # in seconds
 
     try:
-        if d_is_sequence:
-            d_enqueuer = OrderedEnqueuer(
-                d_generator, use_multiprocessing=use_multiprocessing)
-        else:
-            d_enqueuer = GeneratorEnqueuer(
-                d_generator, use_multiprocessing=use_multiprocessing, wait_time=wait_time)
-        d_enqueuer.start(workers=workers, max_queue_size=max_queue_size)
-        d_sample_generator = d_enqueuer.get()
-
+        # TODO: データジェネレーター内部でpredict()を使用した時に上手くいかない問題を修正する
+        # if d_is_sequence:
+        #     d_enqueuer = OrderedEnqueuer(
+        #         d_generator, use_multiprocessing=use_multiprocessing)
+        # else:
+        #     d_enqueuer = GeneratorEnqueuer(
+        #         d_generator, use_multiprocessing=use_multiprocessing, wait_time=wait_time)
+        # d_enqueuer.start(workers=workers, max_queue_size=max_queue_size)
+        # d_sample_generator = d_enqueuer.get()
+        d_sample_generator = d_generator
         if g_is_sequence:
             g_enqueuer = OrderedEnqueuer(
                 g_generator, use_multiprocessing=use_multiprocessing)
