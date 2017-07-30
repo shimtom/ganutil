@@ -20,6 +20,7 @@ def dirpath():
     tempdir = tempfile.TemporaryDirectory()
     print('Directory: %s' % tempdir.name)
     yield tempdir.name
+    print('Directory clean upped.')
     tempdir.cleanup()
 
 
@@ -69,7 +70,7 @@ def generator_model():
 
 @pytest.fixture()
 def compiled_gan(discriminator_model, generator_model):
-    gan = Gan(discriminator_model, generator_model)
+    gan = Gan(generator_model, discriminator_model)
 
     doptimizer = Adam(lr=0.0005)
     goptimizer = Adam(lr=0.0005)
@@ -78,17 +79,8 @@ def compiled_gan(discriminator_model, generator_model):
     dmetrics = ['accuracy']
     gmetrics = ['accuracy']
 
-    gan.compile(doptimizer, goptimizer, dloss, gloss, dmetrics, gmetrics)
-
-    assert gan.discriminator.trainable
-    assert gan.discriminate.optimizer == doptimizer
-    assert gan.discriminate.loss == dloss
-    assert gan.discriminate.metrics == dmetrics
-    assert len(gan.generator.layers) == 2
-    assert gan.generator.trainable
-    assert gan.discriminate.optimizer == doptimizer
-    assert gan.discriminate.loss == dloss
-    assert gan.discriminate.metrics == dmetrics
+    gan.compile(doptimizer, goptimizer, dloss, gloss,
+                dmetrics=dmetrics, gmetrics=gmetrics)
 
     return gan
 
@@ -120,6 +112,21 @@ def trainable_gan(compiled_gan, mnist_dataset):
             inputs = inputs.astype(np.float32)
             targets = np.ones(len(inputs))
             yield inputs, targets
+
+    # check d_generator, g_generator
+    dgen = d_generator(10)
+    for _ in range(10):
+        dgened = next(dgen)
+        assert len(dgened) == 2
+        assert np.array_equal(dgened[0].shape, [10, 28, 28, 1])
+        assert np.array_equal(dgened[1].shape, [10, ])
+
+    ggen = g_generator(10)
+    for _ in range(10):
+        ggened = next(ggen)
+        assert len(ggened) == 2
+        assert np.array_equal(ggened[0].shape, [10, 100])
+        assert np.array_equal(ggened[1].shape, [10, ])
 
     return compiled_gan, d_generator, g_generator
 
@@ -155,9 +162,10 @@ def test_compiled_gan(discriminator_model, generator_model, dmetrics, gmetrics):
     assert gan.generator.optimizer == goptimizer
     assert gan.generator.loss == gloss
     assert gan.generator.metrics == ([] or gmetrics)
+    assert len(gan.generator.layers[0].layers) == len(generator_model.layers)
 
 
-@pytest.mark.Train
+@pytest.mark.callbacks
 @pytest.mark.parametrize("epochs, steps_per_epoch, d_iter,  g_iter", [
     (1, 1, 1, 1),
     (1, 1, 2, 1),
@@ -247,8 +255,8 @@ def test_callbacks(trainable_gan, dirpath, epochs, steps_per_epoch, d_iter,  g_i
 
     gan, d_generator, g_generator = trainable_gan
 
-    gan.fit_generator(d_generator, g_generator, 100,
-                      d_iteration_per_step=1, g_iteration_per_step=1,
+    gan.fit_generator(d_generator(10), g_generator(10), steps_per_epoch,
+                      d_iteration_per_step=d_iter, g_iteration_per_step=g_iter,
                       d_callbacks=d_callbacks,
                       g_callbacks=g_callbacks,
                       epochs=1)
@@ -267,18 +275,20 @@ def test_callbacks(trainable_gan, dirpath, epochs, steps_per_epoch, d_iter,  g_i
     assert g_checker.count_on_batch_begin == epochs * steps_per_epoch * g_iter
     assert g_checker.count_on_batch_end == epochs * steps_per_epoch * g_iter
 
-    assert os.path.isfile(d_lossgraphpath)
-    assert os.path.isfile(d_accgraphpath)
-    assert os.path.isfile(d_losshistorypath)
-    assert os.path.isfile(d_acchistorypath)
-    assert os.path.isfile(d_modelpath)
+    for epoch in range(epochs):
+        assert os.path.isfile(d_lossgraphpath.format(epoch=epoch))
+        assert os.path.isfile(d_accgraphpath.format(epoch=epoch))
+        assert os.path.isfile(d_losshistorypath.format(epoch=epoch))
+        assert os.path.isfile(d_acchistorypath.format(epoch=epoch))
 
-    assert os.path.isfile(g_lossgraphpath)
-    assert os.path.isfile(g_accgraphpath)
-    assert os.path.isfile(g_losshistorypath)
-    assert os.path.isfile(g_acchistorypath)
+        assert os.path.isfile(g_lossgraphpath.format(epoch=epoch))
+        assert os.path.isfile(g_accgraphpath.format(epoch=epoch))
+        assert os.path.isfile(g_losshistorypath.format(epoch=epoch))
+        assert os.path.isfile(g_acchistorypath.format(epoch=epoch))
+        assert os.path.isfile(g_imagepath.format(epoch=epoch))
+
+    assert os.path.isfile(d_modelpath)
     assert os.path.isfile(g_modelpath)
-    assert os.path.isfile(g_imagepath)
 
 
 @pytest.mark.Train
