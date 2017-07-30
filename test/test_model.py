@@ -124,27 +124,35 @@ def trainable_gan(compiled_gan, mnist_dataset):
     return compiled_gan, d_generator, g_generator
 
 
-@pytest.mark.Train
-def test_compiled_gan(discriminator_model, generator_model):
+@pytest.mark.base
+@pytest.mark.parametrize("dmetrics, gmetrics", [
+    (None, None),
+    (['accuracy'], ['accuracy'])
+])
+def test_compiled_gan(discriminator_model, generator_model, dmetrics, gmetrics):
+    """コンパイルが正しく行われることを確認."""
     gan = Gan(discriminator_model, generator_model)
 
     doptimizer = Adam(lr=0.0005)
     goptimizer = Adam(lr=0.0005)
     dloss = 'binary_crossentropy'
     gloss = 'binary_crossentropy'
+    dmetrics = None
+    gmetrics = None
     dmetrics = ['accuracy']
     gmetrics = ['accuracy']
 
-    gan.compile(doptimizer, goptimizer, dloss, gloss, dmetrics, gmetrics)
-    assert gan.discriminator.trainable
-    assert gan.discriminate.optimizer == doptimizer
-    assert gan.discriminate.loss == dloss
-    assert gan.discriminate.metrics == dmetrics
+    gan.compile(doptimizer, goptimizer, dloss, gloss,
+                dmetrics=dmetrics, gmetrics=gmetrics)
+    assert gan.discriminator.built
+    assert gan.discriminator.optimizer == doptimizer
+    assert gan.discriminator.loss == dloss
+    assert gan.discriminator.metrics == ([] or dmetrics)
     assert len(gan.generator.layers) == 2
-    assert gan.generator.trainable
-    assert gan.discriminate.optimizer == doptimizer
-    assert gan.discriminate.loss == dloss
-    assert gan.discriminate.metrics == dmetrics
+    assert gan.generator.built
+    assert gan.generator.optimizer == goptimizer
+    assert gan.generator.loss == gloss
+    assert gan.generator.metrics == ([] or gmetrics)
 
 
 @pytest.mark.Train
@@ -157,6 +165,7 @@ def test_compiled_gan(discriminator_model, generator_model):
     (1, 2, 1, 2),
 ])
 def test_callbacks(trainable_gan, dirpath, epochs, steps_per_epoch, d_iter,  g_iter):
+    """訓練中にコールバックが正しく動作することを確認."""
     class Checker(Callback):
         def __init__(self):
             super(Checker, self).__init__()
@@ -238,7 +247,6 @@ def test_callbacks(trainable_gan, dirpath, epochs, steps_per_epoch, d_iter,  g_i
 
     gan.fit_generator(d_generator, g_generator, 100,
                       d_iteration_per_step=1, g_iteration_per_step=1,
-                      common_callbacks=None,
                       d_callbacks=d_callbacks,
                       g_callbacks=g_callbacks,
                       epochs=1)
@@ -277,12 +285,21 @@ def test_callbacks(trainable_gan, dirpath, epochs, steps_per_epoch, d_iter,  g_i
     (1, 0, False),
 ])
 def test_trained_separately(trainable_gan, d_iter, g_iter, expected):
+    """discriminatorとgeneratorが別々に訓練されていることを確認."""
     gan, d_generator, g_generator = trainable_gan
 
-    before_weights = gan.discriminator.get_weights()
+    dbefore_weights = gan.discriminator.get_weights()
+    gbefore_weights = gan.generator_model.get_weights()
     gan.fit_generator(d_generator, g_generator, 100,
                       d_iteration_per_step=d_iter, g_iteration_per_step=g_iter,
                       epochs=1)
-    after_weights = gan.discriminator.get_weights()
+    dafter_weights = gan.discriminator.get_weights()
+    gafter_weights = gan.generator_model.get_weights()
 
-    assert np.array_equal(before_weights, after_weights) != expected
+    assert len(dbefore_weights) == len(dafter_weights)
+    for w1, w2 in zip(dbefore_weights, dafter_weights):
+        assert np.array_equal(w1, w2) == expected
+
+    assert len(gbefore_weights) == len(gafter_weights)
+    for w1, w2 in zip(gbefore_weights, gafter_weights):
+        assert np.array_equal(w1, w2) != expected
