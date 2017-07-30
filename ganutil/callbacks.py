@@ -14,8 +14,6 @@ import numpy as np
 import seaborn as sns
 
 
-
-
 class GeneratedImage(cbks.Callback):
     def __init__(self, filepath, samples, normalize):
         super(GeneratedImage, self).__init__()
@@ -218,45 +216,6 @@ class GanProgbarLogger(cbks.Callback):
                 glogs[k] = logs['generator'][k]
 
         self.progbar.update(epoch, dlogs, glogs)
-
-
-class ProgLogger(cbks.Callback):
-    def __init__(self, name):
-        super(ProgLogger, self).__init__()
-        self.name = name
-
-    def on_train_begin(self, logs={}):
-        self.epochs = self.params.get('epochs', -1)
-
-    def on_epoch_begin(self, epoch, logs={}):
-        self.steps = self.params.get('steps', -1)
-        self.epoch = epoch
-        self.epoch_start = time.time()
-
-    def on_batch_begin(self, batch, logs={}):
-        self.batch_start = time.time()
-
-    def on_batch_end(self, batch, logs={}):
-        elapsed_sec = math.ceil(time.time() - self.batch_start)
-        info = 'Epoch %d/%d - %s' % (self.epoch, self.epochs, self.name)
-        info += ' [%d/%d] - %ds' % (batch, self.steps, elapsed_sec)
-
-        for k in self.params['metrics']:
-            if k in logs:
-                info += ' - %s: %.4f' % (k, logs[k])
-
-        print(info)
-
-    def on_epoch_end(self, epoch, logs={}):
-        elapsed_sec = math.ceil(time.time() - self.epoch_start)
-        info = 'Epoch %d/%d - %s' % (epoch, self.epochs, self.name)
-        info += ' - %ds' % (elapsed_sec)
-
-        for k in self.params['metrics']:
-            if k in logs:
-                info += ' - %s: %.4f' % (k, logs[k])
-
-        print(info)
 
 
 class GanModelCheckpoint(cbks.ModelCheckpoint):
