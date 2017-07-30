@@ -24,9 +24,10 @@ class Gan(object):
     def compile(self, doptimizer, goptimizer, dloss, gloss,
                 dmetrics=None, dloss_weights=None, dsample_weight_mode=None,
                 gmetrics=None, gloss_weights=None, gsample_weight_mode=None):
+
         self.generator_model._make_predict_function()
         self.generator_graph = tf.get_default_graph()
-        self.discriminator.compile(doptimizer, dloss, metrics=dloss_weights,
+        self.discriminator.compile(doptimizer, dloss, metrics=dmetrics,
                                    loss_weights=dloss_weights,
                                    sample_weight_mode=dsample_weight_mode)
         self.discriminator.trainable = False
