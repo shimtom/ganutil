@@ -1,6 +1,6 @@
+from . import callbacks, utils
 from .discrimination import discriminate
 from .generation import generate
+from .model import Gan
 from .saver import Saver
-from .training import train, fit_generator
-from . import utils
-from . import callbacks
+from .training import fit_generator, train

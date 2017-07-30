@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import math
 import os
+import sys
 import time
 
 import keras.callbacks as cbks
@@ -11,7 +12,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from keras.utils import Progbar
 
 
 class GeneratedImage(cbks.Callback):
@@ -25,7 +25,7 @@ class GeneratedImage(cbks.Callback):
     def on_epoch_end(self, epoch, logs={}):
         filepath = self.filepath.format(epoch=epoch, **logs)
         if not os.path.isdir(os.path.dirname(filepath)):
-            os.mkdir(os.path.dirname(filepath))
+            os.makedirs(os.path.dirname(filepath))
 
         generator = self.model.layers[0]
         images = self.normalize(generator.predict_on_batch(self.samples))
@@ -70,7 +70,7 @@ class ValueGraph(cbks.Callback):
             filepath = self.filepath.format(
                 batch=batch, name=self.name, **logs)
             if not os.path.isdir(os.path.dirname(filepath)):
-                os.mkdir(os.path.dirname(filepath))
+                os.makedirs(os.path.dirname(filepath))
             self._plot(filepath, self.values)
 
     def on_epoch_end(self, epoch, logs={}):
@@ -80,7 +80,7 @@ class ValueGraph(cbks.Callback):
             filepath = self.filepath.format(
                 epoch=epoch, name=self.name, **logs)
             if not os.path.isdir(os.path.dirname(filepath)):
-                os.mkdir(os.path.dirname(filepath))
+                os.makedirs(os.path.dirname(filepath))
             self._plot(filepath, self.epoch_values)
 
     def _plot(self, filepath, values):
@@ -127,7 +127,7 @@ class ValueHistory(cbks.Callback):
             filepath = self.filepath.format(
                 batch=batch, name=self.name, **logs)
             if not os.path.isdir(os.path.dirname(filepath)):
-                os.mkdir(os.path.dirname(filepath))
+                os.makedirs(os.path.dirname(filepath))
             np.save(filepath, np.array(self.values))
 
     def on_epoch_end(self, epoch, logs={}):
@@ -137,7 +137,7 @@ class ValueHistory(cbks.Callback):
             filepath = self.filepath.format(
                 epoch=epoch, name=self.name, **logs)
             if not os.path.isdir(os.path.dirname(filepath)):
-                os.mkdir(os.path.dirname(filepath))
+                os.makedirs(os.path.dirname(filepath))
             np.save(filepath, np.array(self.epoch_values))
 
 
@@ -151,43 +151,70 @@ class AccuracyHistory(ValueHistory):
         super(AccuracyHistory, self).__init__(filepath, 'acc', sample_mode)
 
 
-class ProgLogger(cbks.Callback):
-    def __init__(self, name):
-        super(ProgLogger, self).__init__()
-        self.name = name
+class GanProgbar:
+    def __init__(self, total,  width=30, interval=0.05):
+        self.start = time.time()
+        self.width = width
+        self.interval = interval
+        self.total = total
+        self.numdigits = int(math.floor(math.log10(self.total))) + 1
+        self.counter = '%%%dd/%%%dd ' % (self.numdigits, self.numdigits)
+        self.total_width = 0
 
+    def update(self, count, dlogs, glogs):
+        prev_total_width = self.total_width
+        sys.stdout.write('\b' * prev_total_width)
+        sys.stdout.write('\r')
+
+        bar = self.counter % (count, self.total)
+
+        if self.total is not -1:
+            prog = float(count) / self.total
+            prog_width = int(self.width * prog)
+            bar += '['
+            if prog_width > 0:
+                bar += ('=' * (prog_width - 1))
+                bar += '>' if count < self.total else '='
+            bar += ('.' * (self.width - prog_width))
+            bar += ']'
+            sys.stdout.write(bar)
+            self.total_width = len(bar)
+        info = ' %ds' % (time.time() - self.start)
+        info += ' D::'
+        for k, v in dlogs.items():
+            if abs(v) > 1e-3:
+                info += ' - %s: %.4f' % (k, v)
+            else:
+                info += ' - %s: %.4e' % (k, v)
+
+        info += ' G::'
+        for k, v in glogs.items():
+            if abs(v) > 1e-3:
+                info += ' - %s: %.4f' % (k, v)
+            else:
+                info += ' - %s: %.4e' % (k, v)
+        sys.stdout.write(info)
+        self.total_width += len(info)
+
+        if count >= self.total:
+            sys.stdout.write('\n')
+
+
+class GanProgbarLogger(cbks.Callback):
     def on_train_begin(self, logs={}):
-        self.epochs = self.params.get('epochs', -1)
-
-    def on_epoch_begin(self, epoch, logs={}):
-        self.steps = self.params.get('steps', -1)
-        self.epoch = epoch
-        self.epoch_start = time.time()
-
-    def on_batch_begin(self, batch, logs={}):
-        self.batch_start = time.time()
-
-    def on_batch_end(self, batch, logs={}):
-        elapsed_sec = math.ceil(time.time() - self.batch_start)
-        info = 'Epoch %d/%d - %s' % (self.epoch, self.epochs, self.name)
-        info += ' [%d/%d] - %ds' % (batch, self.steps, elapsed_sec)
-
-        for k in self.params['metrics']:
-            if k in logs:
-                info += ' - %s: %.4f' % (k, logs[k])
-
-        print(info)
+        self.progbar = GanProgbar(self.params.get('epochs', -1))
 
     def on_epoch_end(self, epoch, logs={}):
-        elapsed_sec = math.ceil(time.time() - self.epoch_start)
-        info = 'Epoch %d/%d - %s' % (epoch, self.epochs, self.name)
-        info += ' - %ds' % (elapsed_sec)
+        dlogs = {}
+        for k in self.params['metrics']['discriminator']:
+            if k in logs['discriminator']:
+                dlogs[k] = logs['discriminator'][k]
+        glogs = {}
+        for k in self.params['metrics']['generator']:
+            if k in logs['generator']:
+                glogs[k] = logs['generator'][k]
 
-        for k in self.params['metrics']:
-            if k in logs:
-                info += ' - %s: %.4f' % (k, logs[k])
-
-        print(info)
+        self.progbar.update(epoch + 1, dlogs, glogs)
 
 
 class GanModelCheckpoint(cbks.ModelCheckpoint):
