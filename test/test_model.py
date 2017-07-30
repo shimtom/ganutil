@@ -140,7 +140,7 @@ def trainable_gan(compiled_gan, mnist_dataset):
 ])
 def test_compiled_gan(discriminator_model, generator_model, dmetrics, gmetrics):
     """コンパイルが正しく行われることを確認."""
-    gan = Gan(discriminator_model, generator_model)
+    gan = Gan(generator_model, discriminator_model)
 
     doptimizer = Adam(lr=0.0005)
     goptimizer = Adam(lr=0.0005)
@@ -302,7 +302,7 @@ def test_trained_separately(trainable_gan, d_iter, g_iter, expected):
 
     dbefore_weights = gan.discriminator.get_weights()
     gbefore_weights = gan.generator_model.get_weights()
-    gan.fit_generator(d_generator, g_generator, 100,
+    gan.fit_generator(d_generator(10), g_generator(10), 10,
                       d_iteration_per_step=d_iter, g_iteration_per_step=g_iter,
                       epochs=1)
     dafter_weights = gan.discriminator.get_weights()
