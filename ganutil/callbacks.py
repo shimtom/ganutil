@@ -25,7 +25,7 @@ class GeneratedImage(cbks.Callback):
     def on_epoch_end(self, epoch, logs={}):
         filepath = self.filepath.format(epoch=epoch, **logs)
         if not os.path.isdir(os.path.dirname(filepath)):
-            os.mkdir(os.path.dirname(filepath))
+            os.makedirs(os.path.dirname(filepath))
 
         generator = self.model.layers[0]
         images = self.normalize(generator.predict_on_batch(self.samples))
@@ -70,7 +70,7 @@ class ValueGraph(cbks.Callback):
             filepath = self.filepath.format(
                 batch=batch, name=self.name, **logs)
             if not os.path.isdir(os.path.dirname(filepath)):
-                os.mkdir(os.path.dirname(filepath))
+                os.makedirs(os.path.dirname(filepath))
             self._plot(filepath, self.values)
 
     def on_epoch_end(self, epoch, logs={}):
@@ -80,7 +80,7 @@ class ValueGraph(cbks.Callback):
             filepath = self.filepath.format(
                 epoch=epoch, name=self.name, **logs)
             if not os.path.isdir(os.path.dirname(filepath)):
-                os.mkdir(os.path.dirname(filepath))
+                os.makedirs(os.path.dirname(filepath))
             self._plot(filepath, self.epoch_values)
 
     def _plot(self, filepath, values):
@@ -127,7 +127,7 @@ class ValueHistory(cbks.Callback):
             filepath = self.filepath.format(
                 batch=batch, name=self.name, **logs)
             if not os.path.isdir(os.path.dirname(filepath)):
-                os.mkdir(os.path.dirname(filepath))
+                os.makedirs(os.path.dirname(filepath))
             np.save(filepath, np.array(self.values))
 
     def on_epoch_end(self, epoch, logs={}):
@@ -137,7 +137,7 @@ class ValueHistory(cbks.Callback):
             filepath = self.filepath.format(
                 epoch=epoch, name=self.name, **logs)
             if not os.path.isdir(os.path.dirname(filepath)):
-                os.mkdir(os.path.dirname(filepath))
+                os.makedirs(os.path.dirname(filepath))
             np.save(filepath, np.array(self.epoch_values))
 
 
