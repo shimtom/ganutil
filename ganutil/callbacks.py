@@ -160,9 +160,8 @@ class GanProgbar:
         self.numdigits = int(math.floor(math.log10(self.total))) + 1
         self.counter = '%%%dd/%%%dd ' % (self.numdigits, self.numdigits)
         self.total_width = 0
-        pass
 
-    def update(self,  count, dlogs, glogs):
+    def update(self, count, dlogs, glogs):
         prev_total_width = self.total_width
         sys.stdout.write('\b' * prev_total_width)
         sys.stdout.write('\r')
@@ -215,7 +214,7 @@ class GanProgbarLogger(cbks.Callback):
             if k in logs['generator']:
                 glogs[k] = logs['generator'][k]
 
-        self.progbar.update(epoch, dlogs, glogs)
+        self.progbar.update(epoch + 1, dlogs, glogs)
 
 
 class GanModelCheckpoint(cbks.ModelCheckpoint):
