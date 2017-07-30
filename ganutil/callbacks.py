@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import math
 import os
+import sys
 import time
 
 import keras.callbacks as cbks
@@ -11,7 +12,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from keras.utils import Progbar
+
+
 
 
 class GeneratedImage(cbks.Callback):
@@ -149,6 +151,73 @@ class LossHistory(ValueHistory):
 class AccuracyHistory(ValueHistory):
     def __init__(self, filepath, sample_mode='epoch'):
         super(AccuracyHistory, self).__init__(filepath, 'acc', sample_mode)
+
+
+class GanProgbar:
+    def __init__(self, total,  width=30, interval=0.05):
+        self.start = time.time()
+        self.width = width
+        self.interval = interval
+        self.total = total
+        self.numdigits = int(math.floor(math.log10(self.total))) + 1
+        self.counter = '%%%dd/%%%dd ' % (self.numdigits, self.numdigits)
+        self.total_width = 0
+        pass
+
+    def update(self,  count, dlogs, glogs):
+        prev_total_width = self.total_width
+        sys.stdout.write('\b' * prev_total_width)
+        sys.stdout.write('\r')
+
+        bar = self.counter % (count, self.total)
+
+        if self.total is not -1:
+            prog = float(count) / self.total
+            prog_width = int(self.width * prog)
+            bar += '['
+            if prog_width > 0:
+                bar += ('=' * (prog_width - 1))
+                bar += '>' if count < self.total else '='
+            bar += ('.' * (self.width - prog_width))
+            bar += ']'
+            sys.stdout.write(bar)
+            self.total_width = len(bar)
+        info = ' %ds' % (time.time() - self.start)
+        info += ' D::'
+        for k, v in dlogs.items():
+            if abs(v) > 1e-3:
+                info += ' - %s: %.4f' % (k, v)
+            else:
+                info += ' - %s: %.4e' % (k, v)
+
+        info += ' G::'
+        for k, v in glogs.items():
+            if abs(v) > 1e-3:
+                info += ' - %s: %.4f' % (k, v)
+            else:
+                info += ' - %s: %.4e' % (k, v)
+        sys.stdout.write(info)
+        self.total_width += len(info)
+
+        if count >= self.total:
+            sys.stdout.write('\n')
+
+
+class GanProgbarLogger(cbks.Callback):
+    def on_train_begin(self, logs={}):
+        self.progbar = GanProgbar(self.params.get('epochs', -1))
+
+    def on_epoch_end(self, epoch, logs={}):
+        dlogs = {}
+        for k in self.params['metrics']['discriminator']:
+            if k in logs['discriminator']:
+                dlogs[k] = logs['discriminator'][k]
+        glogs = {}
+        for k in self.params['metrics']['generator']:
+            if k in logs['generator']:
+                glogs[k] = logs['generator'][k]
+
+        self.progbar.update(epoch, dlogs, glogs)
 
 
 class ProgLogger(cbks.Callback):

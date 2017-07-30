@@ -6,33 +6,40 @@ import tensorflow as tf
 from keras.models import Sequential
 from keras.utils import GeneratorEnqueuer, OrderedEnqueuer, Sequence
 
-from .callbacks import ProgLogger
+from .callbacks import GanProgbarLogger
 
 
 class Gan(object):
     def __init__(self, generator, discriminator):
-        self.generator = generator
+        """
+        :param generator: Generatorモデル.
+        :param discriminator: Discriminatorモデル.
+        """
         self.discriminator = discriminator
+        # only generator model
+        self.generator_model = generator
+        # generator + freeze discriminator model
+        self.generator = None
 
     def compile(self, doptimizer, goptimizer, dloss, gloss,
                 dmetrics=None, dloss_weights=None, dsample_weight_mode=None,
                 gmetrics=None, gloss_weights=None, gsample_weight_mode=None):
-        self.generator._make_predict_function()
+        self.generator_model._make_predict_function()
         self.generator_graph = tf.get_default_graph()
         self.discriminator.compile(doptimizer, dloss, metrics=dloss_weights,
                                    loss_weights=dloss_weights,
                                    sample_weight_mode=dsample_weight_mode)
         self.discriminator.trainable = False
 
-        self.gan = Sequential((self.discriminator, self.generator))
-        self.gan.compile(goptimizer, gloss, metrics=gmetrics,
-                         loss_weights=gloss_weights,
-                         gsample_weight_mode=gsample_weight_mode)
+        self.generator = Sequential((self.discriminator, self.generator_model))
+        self.generator.compile(goptimizer, gloss, metrics=gmetrics,
+                               loss_weights=gloss_weights,
+                               gsample_weight_mode=gsample_weight_mode)
 
     def fit_generator(self, d_generator, g_generator, steps_per_epoch,
                       d_iteration_per_step=1, g_iteration_per_step=1, epochs=1,
-                      common_callbacks=None, d_callbacks=None, g_callbacks=None,
-                      max_queue_size=10, workers=1, use_multiprocessing=False,
+                      d_callbacks=None, g_callbacks=None, max_queue_size=10,
+                      workers=1, use_multiprocessing=False,
                       initial_epoch=0):
 
         # FIXME: fix problem that processes stop in `use_multiprocessing=True`
@@ -79,7 +86,6 @@ class Gan(object):
             # BaseLoggerは1番目でなければならない
             d_callbacks = [cbks.BaseLogger()] + (d_callbacks or [])
             d_callbacks += [self.discriminator.history]
-            d_callbacks += [ProgLogger(name='Discriminator')]
             for c in d_callbacks:
                 if isinstance(c, cbks.ProgbarLogger):
                     warnings.warn('Using a `keras.callbacks.ProgbarLogger`, '
@@ -102,7 +108,6 @@ class Gan(object):
             # BaseLoggerは1番目でなければならない
             g_callbacks = [cbks.BaseLogger()] + (g_callbacks or [])
             g_callbacks += [self.generator.history]
-            g_callbacks += [ProgLogger(name='Generator')]
             for c in g_callbacks:
                 if isinstance(c, cbks.ProgbarLogger):
                     warnings.warn('Using a `keras.callbacks.ProgbarLogger, `'
@@ -118,42 +123,28 @@ class Gan(object):
                                   ' class.')
 
             g_callbacks = cbks.CallbackList(g_callbacks)
-            g_callbacks.set_model(self.gan)
+            g_callbacks.set_model(self.generator)
             g_callbacks.set_params({
                 'epochs': epochs,
                 'steps': steps_per_epoch,
                 'verbose': 1,
                 'do_validation': False,
-                'metrics': self.gan.metrics_names,
+                'metrics': self.generator.metrics_names,
             })
 
-            self.gan.history = cbks.History()
             # BaseLoggerは1番目でなければならない
-            common_callbacks = [cbks.BaseLogger()] + (common_callbacks or [])
-            common_callbacks += [self.gan.history]
-            common_callbacks += [ProgLogger(name='Generator')]
-            for c in g_callbacks:
-                if isinstance(c, cbks.ProgbarLogger):
-                    warnings.warn('Using a `keras.callbacks.ProgbarLogger, `'
-                                  ' it can\'t distinguishe whether output is '
-                                  'generator\'s or discriminator\'s. Please'
-                                  ' consider using the`ganutil.callbacks.'
-                                  'ProgbarLogger` class')
-                if isinstance(c, cbks.ModelCheckpoint):
-                    warnings.warn('Using a `keras.callbacks.ModelCheckpoint, `'
-                                  ' it can\'t save only generator model.'
-                                  ' Please consider using the'
-                                  ' `ganutil.callbacks.GanModelCheckpoint'
-                                  ' class.')
-
+            common_callbacks = [GanProgbarLogger()]
             common_callbacks = cbks.CallbackList(common_callbacks)
-            common_callbacks.set_model(self.gan)
+            common_callbacks.set_model(self.generator)
             common_callbacks.set_params({
                 'epochs': epochs,
                 'steps': steps_per_epoch,
                 'verbose': 1,
                 'do_validation': False,
-                'metrics': self.gan.metrics_names,
+                'metrics': {
+                    'discriminator': self.discriminator.metrics,
+                    'generator': self.generator.metrics_names,
+                }
             })
 
             d_callbacks.on_train_begin()
@@ -162,16 +153,24 @@ class Gan(object):
 
             d_epoch_logs = {}
             g_epoch_logs = {}
-            common_epoch_logs = {}
+            common_epoch_logs = {
+                'discriminator': d_epoch_logs,
+                'generator': g_epoch_logs,
+            }
             for epoch in range(initial_epoch, epochs):
                 d_callbacks.on_epoch_begin(epoch, d_epoch_logs)
                 g_callbacks.on_epoch_begin(epoch, g_epoch_logs)
                 common_callbacks.on_epoch_begin(epoch, common_epoch_logs)
                 for step in range(steps_per_epoch):
-                    common_batch_logs = {}
+                    d_batch_logs = {}
+                    g_batch_logs = {}
+                    common_batch_logs = {
+                        'discriminator': d_batch_logs,
+                        'generator': g_batch_logs,
+                    }
+
                     common_callbacks.on_batch_begin(step, common_batch_logs)
 
-                    d_batch_logs = {}
                     for index in range(d_iteration_per_step):
                         samples = next(d_sample_generator)
                         d_batch_logs['batch'] = step
@@ -185,19 +184,19 @@ class Gan(object):
                             d_batch_logs[n] = o
                         d_callbacks.on_batch_end(step, d_batch_logs)
 
-                    g_batch_logs = {}
                     for index in range(g_iteration_per_step):
                         samples = next(g_sample_generator)
                         g_batch_logs['batch'] = step
                         g_batch_logs['iteration'] = index
                         g_batch_logs['size'] = samples[0].shape[0]
                         g_callbacks.on_batch_begin(step, g_batch_logs)
-                        g_outs = self.gan.train_on_batch(*samples)
+                        g_outs = self.generator.train_on_batch(*samples)
                         if not isinstance(g_outs, list):
                             g_outs = [g_outs]
-                        for n, o in zip(self.gan.metrics_names, d_outs):
+                        for n, o in zip(self.generator.metrics_names, d_outs):
                             g_batch_logs[n] = o
                         g_callbacks.on_batch_end(step, g_batch_logs)
+
                     common_callbacks.on_batch_end(step, common_batch_logs)
 
                 d_callbacks.on_epoch_end(epoch, d_epoch_logs)
