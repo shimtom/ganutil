@@ -32,10 +32,10 @@ class Gan(object):
                                    sample_weight_mode=dsample_weight_mode)
         self.discriminator.trainable = False
 
-        self.generator = Sequential((self.discriminator, self.generator_model))
+        self.generator = Sequential((self.generator_model, self.discriminator))
         self.generator.compile(goptimizer, gloss, metrics=gmetrics,
                                loss_weights=gloss_weights,
-                               gsample_weight_mode=gsample_weight_mode)
+                               sample_weight_mode=gsample_weight_mode)
 
     def fit_generator(self, d_generator, g_generator, steps_per_epoch,
                       d_iteration_per_step=1, g_iteration_per_step=1, epochs=1,
@@ -194,7 +194,7 @@ class Gan(object):
                         g_outs = self.generator.train_on_batch(*samples)
                         if not isinstance(g_outs, list):
                             g_outs = [g_outs]
-                        for n, o in zip(self.generator.metrics_names, d_outs):
+                        for n, o in zip(self.generator.metrics_names, g_outs):
                             g_batch_logs[n] = o
                         g_callbacks.on_batch_end(step, g_batch_logs)
 
@@ -202,7 +202,7 @@ class Gan(object):
 
                 d_callbacks.on_epoch_end(epoch, d_epoch_logs)
                 g_callbacks.on_epoch_end(epoch, g_epoch_logs)
-                common_callbacks.on_epoch_end(epoch, common_callbacks)
+                common_callbacks.on_epoch_end(epoch, common_epoch_logs)
 
             d_callbacks.on_train_end()
             g_callbacks.on_train_end()
