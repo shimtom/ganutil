@@ -127,7 +127,9 @@ def trainable_gan(compiled_gan, mnist_dataset):
 @pytest.mark.base
 @pytest.mark.parametrize("dmetrics, gmetrics", [
     (None, None),
-    (['accuracy'], ['accuracy'])
+    (None, ['accuracy']),
+    (['accuracy'], None),
+    (['accuracy'], ['accuracy']),
 ])
 def test_compiled_gan(discriminator_model, generator_model, dmetrics, gmetrics):
     """コンパイルが正しく行われることを確認."""
