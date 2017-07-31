@@ -10,6 +10,7 @@ from .callbacks import GanProgbarLogger
 
 
 class Gan(object):
+    """Ganモデルクラス."""
     def __init__(self, generator, discriminator):
         """
         :param generator: Generatorモデル.
@@ -24,6 +25,20 @@ class Gan(object):
     def compile(self, doptimizer, goptimizer, dloss, gloss,
                 dmetrics=None, dloss_weights=None, dsample_weight_mode=None,
                 gmetrics=None, gloss_weights=None, gsample_weight_mode=None):
+        """
+        Ganをcompileする.
+
+        :param doptimizer: discriminatorのoptimizer
+        :param goptimizer: generatorのoptimizer
+        :param dloss: discriminatorのloss
+        :param gloss: generatorのloss
+        :param dmetrics: discriminatorのmetrics
+        :param dloss_weights: discriminatorのloss_weights
+        :param dsample_weight_mode: discriminatorのsample_weight_mode
+        :param gmetrics: generatorのmetrics
+        :param gloss_weights: generatorのloss_weights
+        :param gsample_weight_mode: generatorのsample_weight_mode
+        """
 
         self.generator_model._make_predict_function()
         self.generator_graph = tf.get_default_graph()
@@ -42,7 +57,23 @@ class Gan(object):
                       d_callbacks=None, g_callbacks=None, max_queue_size=10,
                       workers=1, use_multiprocessing=False,
                       initial_epoch=0):
+        """
+        Ganを訓練する.
 
+        :param d_generator: discriminatorのデータジェネレーター.並列に処理される.
+        :param g_generator: generatorのデータジェネレーター.並列には処理されない.
+        :param steps_per_epoch: エポック毎のステップ数.
+        :param d_iteration_per_step: ステップ毎にdiscriminatorを学習する回数.
+        :param g_iteration_per_step: ステップ毎にgeneratorを学習する回数.
+        :param epochs: エポック数.
+        :param d_callbacks: discriminatorのコールバック.
+        :param g_callbacks: generatorのコールバック.
+        :param max_queue_size: キューの最大値.
+        :param workers: ワーカーの数.
+        :param use_multiprocessing: マルチプロセッシングを行うかどうか.
+        :param initial_epoch: 初期エポック.
+        :return: discriminatorのhistoryとgeneratorのhistory.
+        """
         # FIXME: fix problem that processes stop in `use_multiprocessing=True`
         if use_multiprocessing:
             warnings.warn('Multi-process will not be working.')
