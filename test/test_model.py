@@ -131,7 +131,7 @@ def trainable_gan(compiled_gan, mnist_dataset):
     return compiled_gan, d_generator, g_generator
 
 
-@pytest.mark.base
+@pytest.mark.model
 @pytest.mark.parametrize("dmetrics, gmetrics", [
     (None, None),
     (None, ['accuracy']),
@@ -165,7 +165,7 @@ def test_compiled_gan(discriminator_model, generator_model, dmetrics, gmetrics):
     assert len(gan.generator.layers[0].layers) == len(generator_model.layers)
 
 
-@pytest.mark.callbacks
+@pytest.mark.model
 @pytest.mark.parametrize("epochs, steps_per_epoch, d_iter,  g_iter", [
     (1, 1, 1, 1),
     (1, 1, 2, 1),
@@ -291,7 +291,7 @@ def test_callbacks(trainable_gan, dirpath, epochs, steps_per_epoch, d_iter,  g_i
     assert os.path.isfile(g_modelpath)
 
 
-@pytest.mark.Train
+@pytest.mark.model
 @pytest.mark.parametrize("d_iter, g_iter, expected", [
     (0, 1, True),
     (1, 0, False),
@@ -315,3 +315,8 @@ def test_trained_separately(trainable_gan, d_iter, g_iter, expected):
     assert len(gbefore_weights) == len(gafter_weights)
     for w1, w2 in zip(gbefore_weights, gafter_weights):
         assert np.array_equal(w1, w2) != expected
+
+
+@pytest.mark.skip(reason="マルチプロセスが実装されていないため.")
+def test_multi_processing(self):
+    """データのジェネレートをマルチプロセスで動作できることを確認"""
