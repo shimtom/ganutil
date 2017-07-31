@@ -4,25 +4,50 @@ GANモデルに対する操作をまとめたパッケージ.
 
 ## Install
 ```
-$ curl -O https://github.com/shimtom/ganutil/releases/download/ver0.3.1/ganutil-0.3.1-py3-none-any.whl
-$ pip3 install ganutil-0.2.4-py3-none-any.whl
+$ curl -O https://github.com/shimtom/ganutil/releases/download/ver0.4.1/ganutil-0.4.1-py3-none-any.whl
+$ pip3 install ganutil-0.4.1-py3-none-any.whl
 ```
 
 ## Package Usage
-* `ganutil.train(gan, discriminator, generator, d_inputs, g_inputs, epoch_size, batch_size=32, preprocessor=default_preprocessor, saver=default_saver)`:  
-    GANを訓練する.  
-    また,エポックごとに学習結果を保存する.それぞれの損失,精度のグラフ,モデル,パラメータ,生成画像が保存される.保存にはganutil.saverを使用する.  
-    * Arguments:  
-        - `gan`: keras.Model.compile済みgenerator + discriminatorモデル.generatorは訓練可能でなければならないがdiscriminatorは訓練可能であってはならない.
-        - `discriminator`: keras.Model.compile済みdiscriminatorモデル.訓練可能でなければならない.出力の形状は(data size, 1)で値は[0, 1]の範囲でなければならない.
-        - `generator`: keras.Model.ganに使用したgeneratorモデル.出力の形状は(size, height, width, ch)で各値は[-1, 1]の範囲でなければならない.
-        - `d_inputs`: numpy.ndarray.discriminatorの学習に使用する入力データセット.
-        - `g_inputs`: numpy.ndarray.discriminatorの学習に使用する入力データセット.
-        - `epoch_size`: int.最大のエポック数.
-        - `batch_size`: int.バッチの大きさ.デフォルトは`32`.
-        - `preprocessor`: keras.preprocessing.image.ImageDataGenerator.discriminatorの入力データに対して前処理を行ったデータのジェネレーター.デフォルトは何もしないジェネレーターを設定している.
-        - `saver`: ganutil.Saver.各値を保存するセーバー.デフォルトは`save`ディレクトリに各値を保存する.  
+### Gan class
+`ganutil.Gan(generator, discriminator)`
 
+### methods
+* `compile(self, doptimizer, goptimizer, dloss, gloss, dmetrics=None, dloss_weights=None, dsample_weight_mode=None, gmetrics=None, gloss_weights=None, gsample_weight_mode=None)`
+  Ganをcompileする.
+
+  * Arguments
+    - `doptimizer`: discriminatorのoptimizer
+    - `goptimizer`: generatorのoptimizer
+    - `dloss`: discriminatorのloss
+    - `gloss`: generatorのloss
+    - `dmetrics`: discriminatorのmetrics
+    - `dloss_weights`: discriminatorのloss_weights
+    - `dsample_weight_mode`: discriminatorのsample_weight_mode
+    - `gmetrics`: generatorのmetrics
+    - `gloss_weights`: generatorのloss_weights
+    - `gsample_weight_mode`: generatorのsample_weight_mode
+
+
+* `fit_generator(self, d_generator, g_generator, steps_per_epoch, d_iteration_per_step=1, g_iteration_per_step=1, epochs=1, d_callbacks=None, g_callbacks=None, max_queue_size=10, workers=1, use_multiprocessing=False, initial_epoch=0)`
+  Ganを訓練する.
+  * Arguments
+    - `d_generator`: discriminatorのデータジェネレーター.並列に処理される.
+    - `g_generator`: generatorのデータジェネレーター.並列には処理されない.
+    - `steps_per_epoch`: エポック毎のステップ数.
+    - `d_iteration_per_step`: ステップ毎にdiscriminatorを学習する回数.
+    - `g_iteration_per_step`: ステップ毎にgeneratorを学習する回数.
+    - `epochs`: エポック数.
+    - `d_callbacks`: discriminatorのコールバック.
+    - `g_callbacks`: generatorのコールバック.
+    - `max_queue_size`: キューの最大値.
+    - `workers`: ワーカーの数.
+    - `use_multiprocessing`: マルチプロセッシングを行うかどうか.
+    - `initial_epoch`: 初期エポック.
+  * Returns
+    discriminatorのhistoryとgeneratorのhistory.
+
+### functions
 * `ganutil.discriminate(discriminator, dataset, save, batch_size=32)`  
     discriminatorを使用してデータセットに対して識別を行う.
     識別結果はsaverに指定されているディレクトリに`discriminated.npy`で保存される.
@@ -46,87 +71,21 @@ $ pip3 install ganutil-0.2.4-py3-none-any.whl
         - `save`: str.結果を保存するディレクトリ.
         - `batch_size`: int.バッチサイズ.
 
+### callbacks
+* `ganutil.callbacks.GeneratedImage(filepath, samples, normalize)`
 
-## Command Usage
-```
-usage: ganutil [-h] {train,discriminate,generate} ...
+* `ganutil.callbacks.ValueGraph(filepath, name, sample_mode='epoch')`
 
-Generative Adversarial Nets.
+* `ganutil.callbacks.LossGraph(filepath, sample_mode='epoch')`
 
-positional arguments:
-  {train,discriminate,generate}
-    train               GANを訓練する.
-    discriminate        学習済みのDiscriminatorモデルを用いて識別を行う.
-    generate            学習済みのGeneratorモデルを用いて生成を行う.
+* `ganutil.callbacks.AccuracyGraph(filepath, sample_mode='epoch')`
 
-optional arguments:
-  -h, --help            show this help message and exit
-```
+* `ganutil.callbacks.ValueHistory(filepath, name, sample_mode='epoch')`
 
-* `train` command
+* `ganutil.callbacks.LossHistory(filepath, sample_mode='epoch')`
 
-    ```
-    usage: ganutil train [-h] [--epoch EPOCH] [--batch BATCH] [--dweight DWEIGHT]
-                      [--dlr DLR] [--dbeta1 DBETA1] [--gweight GWEIGHT]
-                      [--glr GLR] [--gbeta1 GBETA1]
-                      discriminator generator dinput ginput save
+* `ganutil.callbacks.AccuracyHistory(filepath, sample_mode='epoch')`
 
-    positional arguments:
-      discriminator      discriminatorモデル.サポートしているファイルフォーマットは[.json|.yml].kerasの仕様
-                         に従ったものでなければならない.
-      generator          generatorモデル.サポートしているファイルフォーマットは[.json|.yml].kerasの仕様に従った
-                         ものでなければならない.
-      dinput             discriminatorの訓練に使用する入力データセットのファイル名.サポートしているファイルフォーマットは[.
-                         npy].
-      ginput             generatorの訓練に使用する入力データセットのファイル名.サポートしているファイルフォーマットは[.npy].
-      save               学習結果を保存するディレクトリ.存在しない場合は終了する.
+* `ganutil.callbacks.GanProgbarLogger()`
 
-    optional arguments:
-      -h, --help         show this help message and exit
-      --epoch EPOCH      エポックサイズ.デフォルトは20回.
-      --batch BATCH      バッチサイズ.デフォルトは32.
-      --dweight DWEIGHT  discriminatorの学習済み重みパラメータ.指定したdiscriminatorのアーキテクチャでなければな
-                         らない.サポートしているファイルフォーマットは[.h5].
-      --dlr DLR          discriminatorの学習係数.
-      --dbeta1 DBETA1    discriminatorのAdam Optimizerのbeta1の値.デフォルトは0.5.
-      --gweight GWEIGHT  generatorの学習済み重みパラメータ.指定したgeneratorのアーキテクチャでなければならない.サポート
-                         しているファイルフォーマットは[.h5].
-      --glr GLR          generatorの学習係数.デフォルトは0.0002.
-      --gbeta1 GBETA1    generatorのAdam Optimizerのbeta1の値.デフォルトは0.5.
-    ```
-
-* `generate` command
-
-    ```
-    usage: ganutil generate [-h] [-b BATCH] model x save
-
-    positional arguments:
-      model                 学習済みgeneratorモデル.サポートしているファイルフォーマットは[.h5].kerasの仕様に従った
-                            ものでなければならない.
-      x                     生成に使用される入力データセット.サポートしているファイルフォーマットは[.npy].
-      save                  結果を保存するファイルパス.拡張子がない場合は[.npy]で保存される.また,ディレクトリが存在しない場合は
-                            終了し,ファイルがすでに存在する場合は上書きする.
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      -b BATCH, --batch BATCH
-                            バッチサイズ.デフォルトは32.
-    ```
-
-* `discriminate` command
-
-    ```
-    usage: ganutil discriminate [-h] [-b BATCH] model x save
-
-    positional arguments:
-      model                 学習済みdiscriminatorモデル.サポートしているファイルフォーマットは[.h5].kerasの仕様
-                            に従ったものでなければならない.
-      x                     識別に使用されるデータセット.サポートしているファイルフォーマットは[.npy].
-      save                  結果を保存するファイルパス.拡張子がない場合は[.npy]で保存される.また,ディレクトリが存在しない場合は
-                            終了し,ファイルがすでに存在する場合は上書きする.
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      -b BATCH, --batch BATCH
-                            バッチサイズ.デフォルトは32.
-    ```
+* `ganutil.callbacks.GanModelCheckpoint(filepath, monitor='val_loss', verbose=0, save_best_only=False, save_weights_only=False, mode='auto', period=1)`
