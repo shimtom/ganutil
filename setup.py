@@ -10,9 +10,4 @@ setup(name='ganutil',
       packages=find_packages(exclude=('test')),
       install_requires=['numpy', 'pillow', 'keras >= 2.0.6',
                         'matplotlib', 'seaborn', 'h5py'],
-      entry_points={
-          'console_scripts': [
-              'ganutil = ganutil.ganutil:main',
-          ],
-      },
       test_suite='test')
