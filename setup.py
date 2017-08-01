@@ -26,7 +26,7 @@ class PyTest(TestCommand):
 
 
 setup(name='ganutil',
-      version='0.4.2',
+      version='0.4.3',
       description='Generative Adversarial Nets utility.',
       author='shimtom',
       author_email='ii00zero1230@gmail.com',
