@@ -3,14 +3,20 @@ import warnings
 
 import keras.callbacks as cbks
 import tensorflow as tf
+from keras.backend import tensorflow_backend
 from keras.models import Sequential
 from keras.utils import GeneratorEnqueuer, OrderedEnqueuer, Sequence
 
 from .callbacks import GanProgbarLogger
 
+config = tf.ConfigProto(gpu_options=tf.GPUOptions(allow_growth=True))
+session = tf.Session(config=config)
+tensorflow_backend.set_session(session)
+
 
 class Gan(object):
     """Ganモデルクラス."""
+
     def __init__(self, generator, discriminator):
         """
         :param generator: Generatorモデル.
