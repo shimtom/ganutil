@@ -174,7 +174,7 @@ class Gan(object):
                 'verbose': 1,
                 'do_validation': False,
                 'metrics': {
-                    'discriminator': self.discriminator.metrics,
+                    'discriminator': self.discriminator.metrics_names,
                     'generator': self.generator.metrics_names,
                 }
             })

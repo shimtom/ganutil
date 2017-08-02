@@ -194,6 +194,7 @@ class GanProgbar:
             else:
                 info += ' - %s: %.4e' % (k, v)
         sys.stdout.write(info)
+        sys.stdout.flush()
         self.total_width += len(info)
 
         if count >= self.total:
@@ -202,7 +203,26 @@ class GanProgbar:
 
 class GanProgbarLogger(cbks.Callback):
     def on_train_begin(self, logs={}):
-        self.progbar = GanProgbar(self.params.get('epochs', -1))
+        self.epochs = self.params.get('epochs')
+        self.steps = self.params.get('steps')
+        self.progbar = GanProgbar(self.steps)
+        self.seen = 0
+
+    def on_epoch_begin(self, epoch, logs={}):
+        print('Epoch %d/%d' % (epoch + 1, self.epochs))
+
+    def on_batch_end(self, batch, logs={}):
+        dlogs = {}
+        for k in self.params['metrics']['discriminator']:
+            if k in logs['discriminator']:
+                dlogs[k] = logs['discriminator'][k]
+        glogs = {}
+        for k in self.params['metrics']['generator']:
+            if k in logs['generator']:
+                glogs[k] = logs['generator'][k]
+
+        self.progbar.update(self.seen + 1, dlogs, glogs)
+        self.seen += 1
 
     def on_epoch_end(self, epoch, logs={}):
         dlogs = {}
@@ -214,7 +234,7 @@ class GanProgbarLogger(cbks.Callback):
             if k in logs['generator']:
                 glogs[k] = logs['generator'][k]
 
-        self.progbar.update(epoch + 1, dlogs, glogs)
+        self.progbar.update(self.seen, dlogs, glogs)
 
 
 class GanModelCheckpoint(cbks.ModelCheckpoint):
