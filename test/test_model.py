@@ -91,7 +91,7 @@ def trainable_gan(compiled_gan, mnist_dataset):
     generator = compiled_gan.generator_model
     graph = compiled_gan.generator_graph
 
-    def d_generator(batch_size):
+    def d_generator(batch_size, noisy=False):
         while True:
             indices = np.random.permutation(data_size)
             for i in range(0, math.ceil(data_size / batch_size), batch_size):
@@ -99,18 +99,31 @@ def trainable_gan(compiled_gan, mnist_dataset):
                     ginputs = np.random.uniform(-1, 1, [batch_size, 100])
                     ginputs = ginputs.astype(np.float32)
                     inputs = generator.predict_on_batch(ginputs)
-                    targets = np.zeros(len(inputs), dtype=np.int64)
+                    if noisy:
+                        targets = np.random.uniform(0., 0.3, size=len(inputs))
+                        targets = targets.astype(np.float32)
+                    else:
+                        targets = np.zeros(len(inputs), dtype=np.int64)
+
                     yield inputs, targets
 
                 inputs = mnist_dataset[indices[i:i + batch_size]]
-                targets = np.ones(len(inputs))
+                if noisy:
+                    targets = np.random.uniform(0.7, 1.2, size=len(inputs))
+                    targets = targets.astype(np.float32)
+                else:
+                    targets = np.ones(len(inputs), dtype=np.int64)
                 yield inputs, targets
 
-    def g_generator(batch_size):
+    def g_generator(batch_size, noisy=False):
         while True:
             inputs = np.random.uniform(-1, 1, [batch_size, 100])
             inputs = inputs.astype(np.float32)
-            targets = np.ones(len(inputs))
+            if noisy:
+                targets = np.random.uniform(0.7, 1.2, size=len(inputs))
+                targets = targets.astype(np.float32)
+            else:
+                targets = np.ones(len(inputs))
             yield inputs, targets
 
     # check d_generator, g_generator
@@ -173,6 +186,7 @@ def test_compiled_gan(discriminator_model, generator_model, dmetrics, gmetrics):
     (1, 2, 1, 1),
     (1, 2, 2, 1),
     (1, 2, 1, 2),
+    (20, 10000, 1, 1)
 ])
 def test_callbacks(trainable_gan, dirpath, epochs, steps_per_epoch, d_iter,  g_iter):
     """訓練中にコールバックが正しく動作することを確認."""
@@ -215,7 +229,7 @@ def test_callbacks(trainable_gan, dirpath, epochs, steps_per_epoch, d_iter,  g_i
     d_accgraphpath = os.path.join(dirpath, 'save/{epoch:02d}/dacc.png')
     d_losshistorypath = os.path.join(dirpath, 'save/{epoch:02d}/dloss.npy')
     d_acchistorypath = os.path.join(dirpath, 'save/{epoch:02d}/dacc.npy')
-    d_modelpath = os.path.join(dirpath, 'save/generator.h5')
+    d_modelpath = os.path.join(dirpath, 'save/discriminator.h5')
 
     d_checker = Checker()
 
@@ -259,7 +273,7 @@ def test_callbacks(trainable_gan, dirpath, epochs, steps_per_epoch, d_iter,  g_i
                       d_iteration_per_step=d_iter, g_iteration_per_step=g_iter,
                       d_callbacks=d_callbacks,
                       g_callbacks=g_callbacks,
-                      epochs=1)
+                      epochs=epochs)
 
     assert d_checker.count_on_train_begin == 1
     assert d_checker.count_on_train_end == 1
