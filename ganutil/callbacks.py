@@ -221,7 +221,7 @@ class GanProgbarLogger(cbks.Callback):
             if k in logs['generator']:
                 glogs[k] = logs['generator'][k]
 
-        self.progbar.update(self.seen + 1, dlogs, glogs)
+        self.progbar.update((self.seen + 1) % self.steps, dlogs, glogs)
         self.seen += 1
 
     def on_epoch_end(self, epoch, logs={}):
@@ -234,7 +234,7 @@ class GanProgbarLogger(cbks.Callback):
             if k in logs['generator']:
                 glogs[k] = logs['generator'][k]
 
-        self.progbar.update(self.seen, dlogs, glogs)
+        self.progbar.update(self.steps, dlogs, glogs)
 
 
 class GanModelCheckpoint(cbks.ModelCheckpoint):
