@@ -164,3 +164,45 @@ def test_valuehistory(dirpath, filepath, sample_mode, epoch_mode):
     callback.on_train_end()
     assert callback.values == [1 for _ in range(10 * 10)]
     assert callback.epoch_values == [10 for _ in range(10)]
+
+@pytest.mark.callback
+@pytest.mark.parametrize('epochs, steps', [
+    (1, 10),
+    (2, 10),
+    (30, 50),
+])
+def test_progbar(epochs, steps):
+    progbar = cbks.GanProgbarLogger()
+    progbar.params = {
+        'epochs': epochs,
+        'steps': steps,
+        'metrics': {
+            'discriminator': ['loss'],
+            'generator': ['loss']
+        }
+    }
+    progbar.on_train_begin()
+    for epoch in range(epochs):
+        progbar.on_epoch_begin(epoch)
+        for step in range(steps):
+            logs = {
+                'discriminator': {
+                    'loss': step,
+                },
+                'generator': {
+                    'loss': step,
+                }
+            }
+            progbar.on_batch_begin(step, logs)
+            progbar.on_batch_end(step, logs)
+        logs = {
+            'discriminator': {
+                'loss': epoch,
+            },
+            'generator': {
+                'loss': epoch,
+            }
+        }
+        progbar.on_epoch_end(epoch, logs)
+
+    progbar.on_train_end()
